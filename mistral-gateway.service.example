@@ -1,0 +1,16 @@
+[Unit]
+Description=Mistral Vibe gateway (OpenAI-compatible local proxy)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/mistral-gateway
+ExecStart=/usr/bin/python3 %h/mistral-gateway/gateway.py
+Environment="BIND=127.0.0.1"
+Environment="PORT=8788"
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
