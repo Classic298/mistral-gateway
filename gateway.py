@@ -17,6 +17,9 @@ Auth: clients send the gateway's own key from GATEWAY_KEY, or the gateway
       runs keyless on loopback.
 """
 import datetime
+import hashlib
+import hmac
+import http.client
 import json
 import logging
 import os
@@ -40,6 +43,7 @@ MISTRAL_WHOAMI_URL = "https://console.mistral.ai/api/vibe/whoami"
 
 BASE_DIR = pathlib.Path(__file__).parent
 STATE_FILE = BASE_DIR / "pool_state.json"
+LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "[::1]"}
 POLL_SLEEP = 0.3
 # Rejection code -> cooldown seconds for the account that was rejected.
 # Built in main() after env files load, so gateway.env overrides apply.
@@ -113,32 +117,41 @@ def load_accounts(vibe_env: dict[str, str]) -> list[Account]:
     return accounts
 
 
+def key_fingerprint(key: str) -> str:
+    return hashlib.sha256(key.encode()).hexdigest()[:12]
+
+
 class KeyPool:
     def __init__(self, accounts: list[Account]) -> None:
         self.accounts = accounts
-        self.state = load_state()  # {account name: {"down_until": epoch}}
+        self.state = load_state()  # {account name: {"down_until": epoch, "key": fingerprint}}
         self.lock = threading.Lock()
 
-    def down_until(self, name: str) -> float:
-        with self.lock:
-            return float(self.state.get(name, {}).get("down_until") or 0)
+    def _down_until_locked(self, account: Account) -> float:
+        entry = self.state.get(account.name, {})
+        if entry.get("key") != key_fingerprint(account.key):
+            return 0.0  # cooldown belonged to a key that has since been replaced
+        return float(entry.get("down_until") or 0)
 
-    def mark_down(self, name: str, why: str, cooldown: float) -> None:
+    def down_until(self, account: Account) -> float:
+        with self.lock:
+            return self._down_until_locked(account)
+
+    def mark_down(self, account: Account, why: str, cooldown: float) -> None:
         with self.lock:
             until = time.time() + cooldown
-            if float(self.state.get(name, {}).get("down_until") or 0) >= until:
+            if self._down_until_locked(account) >= until:
                 return
-            self.state.setdefault(name, {})["down_until"] = until
+            self.state[account.name] = {"down_until": until, "key": key_fingerprint(account.key)}
             save_state(self.state)
-        LOG.warning("account %s cooling down (%s) for %.0fs", name, why, cooldown)
+        LOG.warning("account %s cooling down (%s) for %.0fs", account.name, why, cooldown)
 
     def accounts_for(self) -> list[Account]:
         """Serving keys in order. The Vibe key gets all traffic so its upstream
         prompt cache stays warm; the fallback only steps in while it cools down."""
         now = time.time()
         with self.lock:
-            serving = [a for a in self.accounts
-                       if now >= float(self.state.get(a.name, {}).get("down_until") or 0)]
+            serving = [a for a in self.accounts if now >= self._down_until_locked(a)]
         if not serving:
             return [self.accounts[0]]  # all cooling: try the first anyway
         return serving
@@ -290,6 +303,14 @@ def normalize_stream_line(line: bytes, saw_tool_call: bool = False) -> tuple[byt
     return b"data: " + json.dumps(parsed).encode() + sep + tail, saw_tool_call
 
 
+def parse_event(event: bytes) -> dict | None:
+    try:
+        parsed = json.loads(event[6:].strip())
+    except ValueError:
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
 def normalize_completion(payload: bytes) -> bytes:
     """Rewrite one non-streaming completion to plain OpenAI message shape."""
     try:
@@ -322,7 +343,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(data)))
-        self.send_header("Access-Control-Allow-Origin", "*")
+        if code >= 400:
+            self.send_header("Connection", "close")  # request body may be unread
         for k, v in (headers or {}).items():
             self.send_header(k, v)
         self.end_headers()
@@ -333,7 +355,19 @@ class Handler(BaseHTTPRequestHandler):
         if not expected:
             return True  # keyless on loopback
         auth = self.headers.get("Authorization", "")
-        return auth == f"Bearer {expected}" or auth == expected
+        return hmac.compare_digest(auth.removeprefix("Bearer "), expected)
+
+    def _host_allowed(self) -> bool:
+        """Keyless mode only answers loopback hostnames, which blocks DNS rebinding."""
+        if os.environ.get("GATEWAY_KEY"):
+            return True
+        host = self.headers.get("Host", "")
+        if not host.endswith("]") and ":" in host:
+            host = host.rpartition(":")[0]  # strip the port
+        if host in LOOPBACK_HOSTS:
+            return True
+        LOG.warning("rejected Host %r: set GATEWAY_KEY to allow other hostnames", host)
+        return False
 
     def _proxy_body(self, body: bytes, stream: bool) -> None:
         """Try accounts in pool order; stream the winning response downstream."""
@@ -351,8 +385,10 @@ class Handler(BaseHTTPRequestHandler):
                 e.close()
                 last_err = (e.code, detail)
                 LOG.info("key=%s rejected: %s %s", account.name, e.code, detail[:200])
+                if e.code in (400, 422):
+                    break
                 if e.code in COOLDOWNS:
-                    POOL.mark_down(account.name, f"HTTP {e.code}", COOLDOWNS[e.code])
+                    POOL.mark_down(account, f"HTTP {e.code}", COOLDOWNS[e.code])
                 continue
             except OSError as e:
                 LOG.warning("key=%s network error: %s", account.name, e)
@@ -364,23 +400,17 @@ class Handler(BaseHTTPRequestHandler):
                 # upstream failure can still fall through to the next account.
                 try:
                     payload = normalize_completion(upstream.read())
-                except OSError as e:
+                except (OSError, http.client.HTTPException) as e:
                     LOG.warning("key=%s died mid-read: %s", account.name, e)
                     last_err = (502, str(e).encode())
                     continue
                 finally:
                     upstream.close()
-                try:
-                    record_usage(
-                        json.loads(payload).get("model") or self._req_model,
-                        account.name,
-                        json.loads(payload).get("usage") or {},
-                    )
-                except ValueError:
-                    pass
+                completion = parse_event(b"data: " + payload) or {}
+                record_usage(completion.get("model") or self._req_model, account.name,
+                             completion.get("usage") or {})
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
-                self.send_header("Access-Control-Allow-Origin", "*")
                 self.send_header("X-Pool-Key", account.name)
                 self.send_header("Content-Length", str(len(payload)))
                 self.end_headers()
@@ -388,10 +418,10 @@ class Handler(BaseHTTPRequestHandler):
                 LOG.info("served by key=%s", account.name)
                 return
 
+            sent = 0
             try:
                 self.send_response(200)
                 self.send_header("Content-Type", "text/event-stream")
-                self.send_header("Access-Control-Allow-Origin", "*")
                 self.send_header("Cache-Control", "no-cache")
                 self.send_header("Connection", "close")
                 rl = read_ratelimit_headers(upstream)
@@ -401,11 +431,10 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 buf = b""
                 saw_tool_call = False
-                sent = 0
                 stream_usage = None
                 stream_model = None
                 while True:
-                    chunk = upstream.read(8192)
+                    chunk = upstream.read1(8192)  # read() would hold events until 8 KB arrive
                     if not chunk:
                         break
                     buf += chunk
@@ -417,24 +446,21 @@ class Handler(BaseHTTPRequestHandler):
                         self.wfile.write(event)
                         sent += len(event)
                         self.wfile.flush()
-                        try:
-                            event_json = json.loads(event[6:].strip())
-                        except ValueError:
-                            event_json = None
-                        if isinstance(event_json, dict):
-                            if event_json.get("model"):
-                                stream_model = event_json["model"]
-                            if event_json.get("usage"):
-                                stream_usage = event_json["usage"]
+                        event_json = parse_event(event) or {}
+                        stream_model = event_json.get("model") or stream_model
+                        stream_usage = event_json.get("usage") or stream_usage
                 if buf:
                     tail_event, saw_tool_call = normalize_stream_line(buf, saw_tool_call)
                     self.wfile.write(tail_event)
                     sent += len(tail_event)
                     self.wfile.flush()
+                    event_json = parse_event(tail_event) or {}
+                    stream_model = event_json.get("model") or stream_model
+                    stream_usage = event_json.get("usage") or stream_usage
                 LOG.info("stream complete: key=%s forwarded=%dB tool_calls=%s", account.name, sent, saw_tool_call)
                 if stream_usage:
                     record_usage(stream_model or self._req_model, account.name, stream_usage)
-            except OSError as e:
+            except (OSError, http.client.HTTPException) as e:
                 LOG.warning("stream cut: key=%s forwarded=%dB error=%s", account.name, sent, e)
             else:
                 LOG.info("served by key=%s", account.name)
@@ -446,14 +472,9 @@ class Handler(BaseHTTPRequestHandler):
         self._reply(code, {"error": {"message": detail.decode(errors="replace")[:500], "type": "upstream_error", "code": code}})
 
     # --- routes --------------------------------------------------------
-    def do_OPTIONS(self):
-        self.send_response(204)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type")
-        self.end_headers()
-
     def do_GET(self):
+        if not self._host_allowed():
+            return self._reply(403, {"error": {"message": "forbidden host"}})
         route, _, query = self.path.partition("?")
         if route == "/health":
             if os.environ.get("GATEWAY_KEY") and not self._authorized():
@@ -472,27 +493,28 @@ class Handler(BaseHTTPRequestHandler):
                         MISTRAL_MODELS_URL, account.key, account.name, None, method="GET"
                     )
                 except urllib.error.HTTPError as e:
+                    e.close()
                     LOG.info("models via key=%s failed: %s", account.name, e)
                     if e.code in COOLDOWNS:
-                        POOL.mark_down(account.name, f"HTTP {e.code}", COOLDOWNS[e.code])
+                        POOL.mark_down(account, f"HTTP {e.code}", COOLDOWNS[e.code])
                     continue
                 except OSError as e:
                     LOG.info("models via key=%s failed: %s", account.name, e)
                     continue
                 try:
-                    payload = upstream.read()
-                except OSError as e:
+                    models = json.loads(upstream.read())
+                except (OSError, http.client.HTTPException, ValueError) as e:
                     LOG.info("models read via key=%s failed: %s", account.name, e)
                     continue
                 finally:
                     upstream.close()
-                return self._reply(200, json.loads(payload))
+                return self._reply(200, models)
             return self._reply(502, {"error": {"message": "all keys failed"}})
         if route == "/pool/status":
             now = time.time()
             accounts = []
             for account in POOL.accounts:
-                down_until = POOL.down_until(account.name)
+                down_until = POOL.down_until(account)
                 accounts.append({
                     "name": account.name,
                     "cooling": now < down_until,
@@ -508,7 +530,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 window_days = int(params["days"][0]) if "days" in params else 3650
                 since = (datetime.date.today() - datetime.timedelta(days=window_days)).isoformat()
-            except ValueError:
+            except (ValueError, OverflowError):
                 since = "0000-01-01"
             try:
                 with USAGE_DB_LOCK:
@@ -531,15 +553,29 @@ class Handler(BaseHTTPRequestHandler):
         return self._reply(404, {"error": {"message": f"unknown route {self.path}"}})
 
     def do_POST(self):
+        if not self._host_allowed():
+            return self._reply(403, {"error": {"message": "forbidden host"}})
         if not self._authorized():
             return self._reply(401, {"error": {"message": "unauthorized"}})
         if self.path not in ("/v1/chat/completions", "/v1/chat/completions/", "/chat/completions"):
             return self._reply(404, {"error": {"message": f"unknown route {self.path}"}})
-        length = int(self.headers.get("Content-Length") or 0)
+        if "chunked" in self.headers.get("Transfer-Encoding", "").lower():
+            return self._reply(411, {"error": {"message": "Content-Length required"}})
+        # application/json forces a CORS preflight, which this server never answers
+        if self.headers.get_content_type() != "application/json":
+            return self._reply(415, {"error": {"message": "Content-Type must be application/json"}})
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            length = -1
+        if length < 0:
+            return self._reply(400, {"error": {"message": "invalid Content-Length"}})
         body = self.rfile.read(length)
         try:
             req = json.loads(body)
         except ValueError:
+            req = None
+        if not isinstance(req, dict):
             return self._reply(400, {"error": {"message": "invalid JSON body"}})
         stream = bool(req.get("stream"))
         changed = False
@@ -554,11 +590,13 @@ class Handler(BaseHTTPRequestHandler):
             # mid-reasoning with no visible text.
             req["max_tokens"] = 32768
             changed = True
-        msgs = req.get("messages") or []
+        msgs = req.get("messages")
         if (
             "reasoning_effort" not in req
             and req.get("tools")
+            and isinstance(msgs, list)
             and msgs
+            and isinstance(msgs[-1], dict)
             and msgs[-1].get("role") == "tool"
         ):
             # GLM sometimes terminates tool-result composition turns with zero
@@ -575,6 +613,10 @@ class Handler(BaseHTTPRequestHandler):
 
 def main() -> int:
     os.environ.update(read_env_file(BASE_DIR / "gateway.env"))
+    logging.basicConfig(
+        level=os.environ.get("LOG_LEVEL", "INFO"),
+        format="%(asctime)s %(levelname)s %(message)s",
+    )
     vibe_env = read_env_file(pathlib.Path(
         os.environ.get("VIBE_ENV_FILE", str(pathlib.Path.home() / ".vibe/.env"))))
     build_cooldowns()
@@ -609,8 +651,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        level=os.environ.get("LOG_LEVEL", "INFO"),
-        format="%(asctime)s %(levelname)s %(message)s",
-    )
     sys.exit(main())

@@ -58,6 +58,8 @@ Requirements: Python 3.10+ and a Mistral plan that includes Vibe (Le Chat Pro, T
    - API key: anything (or the value of `GATEWAY_KEY` if you set one)
    - Model: any ID from `curl http://127.0.0.1:8788/v1/models`
 
+   Requests must be sent as `Content-Type: application/json`. Browsers cannot call the gateway directly; it is meant for server-side and desktop clients.
+
    Quick test:
 
    ```sh
@@ -71,7 +73,7 @@ Requirements: Python 3.10+ and a Mistral plan that includes Vibe (Le Chat Pro, T
 ```sh
 mkdir -p ~/.config/systemd/user
 cp mistral-gateway.service.example ~/.config/systemd/user/mistral-gateway.service
-# edit WorkingDirectory and ExecStart to point at your clone
+# the example assumes the clone is at ~/mistral-gateway; otherwise edit WorkingDirectory and ExecStart
 systemctl --user daemon-reload
 systemctl --user enable --now mistral-gateway
 journalctl --user -u mistral-gateway -f
@@ -86,7 +88,7 @@ Settings come from environment variables or from a `gateway.env` file next to `g
 | `VIBE_KEY` | `MISTRAL_API_KEY` from `~/.vibe/.env` | Your Vibe plan key. Only set it if you do not want the CLI's file to be used. |
 | `VIBE_ENV_FILE` | `~/.vibe/.env` | Where to look for the Vibe CLI's key. |
 | `STUDIO_API_KEY` | unset | Optional pay-as-you-go fallback key from Mistral AI Studio. |
-| `GATEWAY_KEY` | unset | If set, clients must send it as `Authorization: Bearer <key>`. |
+| `GATEWAY_KEY` | unset | If set, clients must send it as `Authorization: Bearer <key>`. Without it the gateway only answers requests addressed to `localhost`, `127.0.0.1` or `[::1]`, so set it if a client reaches the gateway under another hostname (e.g. from a Docker container). |
 | `BIND` | `127.0.0.1` | Listen address. Keep it on loopback (see below). |
 | `PORT` | `8788` | Listen port. |
 | `RETRY_429_SECONDS` / `RETRY_429_INTERVAL` | `60` / `10` | How long and how often to retry a rate-limited key. |
@@ -102,9 +104,9 @@ Checked against the [Mistral AI Terms of Service for EU consumers](https://legal
 **Why the gateway is designed to stay within those terms:**
 
 - **Official key, official API.** The key comes from Mistral's own login flow in the official Vibe CLI. The gateway calls the same public API endpoint with the same standard `Authorization: Bearer` header the CLI uses. It does not scrape, impersonate the CLI, reverse engineer anything or touch any security mechanism. Mistral's [API key documentation](https://docs.mistral.ai/admin/identity-access/api-keys) lists Vibe keys as "Keys used by Vibe Code" and states that "Vibe-only users usually do not need API keys unless they also use Studio, the API, Vibe Code, or another developer tool."
-- **Your plan's limits stay in force.** Every request counts against your plan exactly like a Vibe CLI request. A rate limit makes the gateway wait and retry the same key; it never switches to another account to get around a limit.
+- **Your plan's limits stay in force.** Every request counts against your plan exactly like a Vibe CLI request. A rate limit makes the gateway wait and retry the same key; it never switches to another Vibe account to get around a limit. The only fallback is your own optional Studio key.
 - **One person, one account.** The EU consumer terms state: "The creation or use of multiple Mistral AI accounts by a single individual is strictly prohibited, including to bypass rate limits or any other restrictions." The gateway therefore supports exactly one Vibe key.
-- **Personal use only.** The consumer terms also state: "Your account is intended for your individual use only, and you may not share your account with any other person. [...] You may not make your account credentials available to third parties, [...] or resell or lease access to your account." The commercial terms (section 2.2) forbid to "buy, sell, or transfer API keys" and to "grant any third party access to the Mistral AI Products without our prior written authorization". The gateway therefore listens on `127.0.0.1` only. **Do not expose it to the internet or share it with other people**; doing so would hand them access to your account.
+- **Personal use only.** The consumer terms also state: "Your account is intended for your individual use only, and you may not share your account with any other person. [...] You may not make your account credentials available to third parties, [...] or resell or lease access to your account." The commercial terms (section 2.2) forbid customers to "buy, sell, or transfer API keys" and to "grant any third party access to the Mistral AI Products without our prior written authorization". The gateway therefore listens on `127.0.0.1` only. **Do not expose it to the internet or share it with other people**; doing so would hand them access to your account.
 
 **Your responsibility.** Mistral can change its terms at any time. Before you use this gateway, and again whenever Mistral announces a change, read the current terms yourself and stop using the gateway if they no longer allow it. Mistral decides how to enforce its own terms, and nobody can promise that an account will not be restricted or suspended.
 
