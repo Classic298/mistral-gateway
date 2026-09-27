@@ -119,3 +119,5 @@ This software is provided "as is" under the [PolyForm Noncommercial License 1.0.
 ## License
 
 [PolyForm Noncommercial 1.0.0](LICENSE): free for personal, hobby, research and other noncommercial use. Commercial use is not permitted.
+
+It is noncommercial because a Mistral Vibe subscription is a consumer plan: Mistral's consumer terms only cover "your personal use as a consumer", and business use falls under their separate [Commercial Terms of Service](https://legal.mistral.ai/terms/commercial-terms-of-service).
