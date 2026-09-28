@@ -37,6 +37,8 @@ Requirements: Python 3.10+ and a Mistral plan that includes Vibe (Le Chat Pro, T
 
    The CLI stores your plan key in `~/.vibe/.env`. The gateway reads it from there, so you never copy the key by hand.
 
+   Without the CLI: open [Code › Extensions](https://chat.mistral.ai/code/extensions) in Le Chat, expand **Advanced** on the Vibe CLI card and copy the **Vibe API Key**. Put it in `gateway.env` as `VIBE_KEY=...`. The same panel shows your monthly usage and lets you rotate the key.
+
 3. Get the gateway and start it:
 
    ```sh
@@ -85,7 +87,7 @@ Settings come from environment variables or from a `gateway.env` file next to `g
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `VIBE_KEY` | `MISTRAL_API_KEY` from `~/.vibe/.env` | Your Vibe plan key. Only set it if you do not want the CLI's file to be used. |
+| `VIBE_KEY` | `MISTRAL_API_KEY` from `~/.vibe/.env` | Your Vibe plan key. Set it if you copied the key from Code › Extensions, or to override the CLI's file. |
 | `VIBE_ENV_FILE` | `~/.vibe/.env` | Where to look for the Vibe CLI's key. |
 | `STUDIO_API_KEY` | unset | Optional pay-as-you-go fallback key from Mistral AI Studio. |
 | `GATEWAY_KEY` | unset | If set, clients must send it as `Authorization: Bearer <key>`. Without it the gateway only answers requests addressed to `localhost`, `127.0.0.1` or `[::1]`, so set it if a client reaches the gateway under another hostname (e.g. from a Docker container). |

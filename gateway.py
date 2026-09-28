@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Local OpenAI-compatible gateway for a Mistral Vibe subscription.
 
-Bridges OpenAI-style /v1/chat/completions clients to Mistral using the key
-the official Vibe CLI provisions for your plan, with an optional Mistral
-AI Studio API key as pay-as-you-go fallback.
+Bridges OpenAI-style /v1/chat/completions clients to Mistral using your
+Vibe plan key (from `vibe --setup` or copied into VIBE_KEY from
+https://chat.mistral.ai/code/extensions), with an optional Mistral AI
+Studio API key as pay-as-you-go fallback.
 
 Key logic:
   - 429  -> retry the same key every RETRY_429_INTERVAL (10s) for
@@ -113,7 +114,13 @@ def load_accounts(vibe_env: dict[str, str]) -> list[Account]:
     if studio_key:
         accounts.append(Account("studio", studio_key))
     if not accounts:
-        raise SystemExit("no key found: run `vibe --setup` or set VIBE_KEY / STUDIO_API_KEY")
+        raise SystemExit(
+            "no key found. Get your Vibe key one of two ways:\n"
+            "  1. run `vibe --setup` (the gateway reads ~/.vibe/.env)\n"
+            "  2. copy it from https://chat.mistral.ai/code/extensions (Advanced)"
+            " into gateway.env as VIBE_KEY=...\n"
+            "Or set STUDIO_API_KEY for a pay-as-you-go key."
+        )
     return accounts
 
 
