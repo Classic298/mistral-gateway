@@ -21,7 +21,7 @@ It uses the same key the official [Mistral Vibe CLI](https://github.com/mistrala
 
 ## Setup
 
-Requirements: Python 3.10+ and a Mistral plan that includes Vibe (Le Chat Pro, Team or similar).
+Requirements: Python 3.10+ and a Mistral Vibe plan with coding included (Pro, Team or Enterprise).
 
 1. Install the official Vibe CLI (see the [Mistral Vibe repository](https://github.com/mistralai/mistral-vibe) for other install methods):
 
