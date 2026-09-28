@@ -37,7 +37,7 @@ Requirements: Python 3.10+ and a Mistral plan that includes Vibe (Le Chat Pro, T
 
    The CLI stores your plan key in `~/.vibe/.env`. The gateway reads it from there, so you never copy the key by hand.
 
-   Without the CLI: open [Code › Extensions](https://chat.mistral.ai/code/extensions) in Le Chat, expand **Advanced** on the Vibe CLI card and copy the **Vibe API Key**. Put it in `gateway.env` as `VIBE_KEY=...`. The same panel shows your monthly usage and lets you rotate the key.
+   Without the CLI: open [Code › Extensions](https://chat.mistral.ai/code/extensions) in Vibe, expand **Advanced** on the Vibe CLI card and copy the **Vibe API Key**. Put it in `gateway.env` as `VIBE_KEY=...`. The same panel shows your monthly usage and lets you rotate the key.
 
 3. Get the gateway and start it:
 
