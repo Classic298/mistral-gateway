@@ -321,6 +321,17 @@ def parse_event(event: bytes) -> dict | None:
     return parsed if isinstance(parsed, dict) else None
 
 
+def is_cut_event(event: bytes) -> bool:
+    """A cut stream leaves a trailing event whose data line no longer parses."""
+    if b"\r\n\r\n" in event:
+        return False  # CRLF framing never splits above, so this holds whole events
+    data_line = next((line for line in event.splitlines() if line.startswith(b"data:")), None)
+    if data_line is None:
+        return False
+    payload = data_line[5:].strip()
+    return payload != b"[DONE]" and parse_event(b"data: " + payload) is None
+
+
 def normalize_completion(payload: bytes) -> bytes:
     """Rewrite one non-streaming completion to plain OpenAI message shape."""
     try:
@@ -458,6 +469,9 @@ class Handler(BaseHTTPRequestHandler):
                         event_json = parse_event(event) or {}
                         stream_model = event_json.get("model") or stream_model
                         stream_usage = event_json.get("usage") or stream_usage
+                if pending and is_cut_event(pending):
+                    LOG.warning("stream cut mid-event: key=%s dropped=%dB", account.name, len(pending))
+                    pending = b""
                 if pending:
                     tail_event, saw_tool_call = normalize_stream_event(pending, saw_tool_call)
                     self.wfile.write(tail_event)
