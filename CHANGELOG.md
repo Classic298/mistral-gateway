@@ -11,7 +11,8 @@ Changelog conventions:
 
 ### Fixed
 
-- Chat apps set to a reasoning level the model does not offer (for example low or medium on Mistral Large 4, which only has none and high) now get an answer instead of an error. The gateway asks again with the closest level the model does offer.
+- Chat apps set to a reasoning level the model does not offer (for example low or medium on Mistral Large 4, which only has none and high) now get an answer instead of an error. The gateway asks again with the closest level the model does offer, leaning toward less reasoning for minimal and low and toward more for everything else.
+- Tool calls now work on models without reasoning, such as `mistral-large-latest`, Ministral and Codestral. Their answer to a tool result used to fail with an error.
 
 ## [1.0.1] - 2026-09-30
 

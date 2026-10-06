@@ -15,10 +15,30 @@ It uses the same key the official [Mistral Vibe CLI](https://github.com/mistrala
   - `stream_options.include_usage` is added to streaming requests so clients get token counts
   - `max_tokens` defaults to 32768 when the client sends none (Mistral's default is 4096, which reasoning models can use up before writing any visible text)
   - `reasoning_effort: "high"` is added to turns that answer a tool result, because reasoning models sometimes end those turns with empty output otherwise
-  - a `reasoning_effort` the model rejects is retried with the closest level it accepts (Mistral Large 4 only takes `none` and `high`, GLM only `low`, `high` and `max`)
+  - a `reasoning_effort` the model rejects is retried with the closest level it accepts, or without it for models that have no reasoning (see [Models](#models))
 - Handles rate limits politely: on HTTP 429 it waits and retries the same key every 10 s for up to 60 s.
 - Optional fallback to a Mistral AI Studio API key when the Vibe key is rate limited or its budget is spent.
 - Records daily token usage per model in a local SQLite file (`usage.db`), readable at `/usage`.
+
+## Models
+
+The chat models below were tested through the gateway on 2026-10-06, including tool calls and every `reasoning_effort` level. Mistral changes the line-up from time to time; `/v1/models` always lists what your key can use.
+
+| Model | Also available as | Context | Images | Reasoning effort |
+|---|---|---|---|---|
+| `mistral-large-4` | `mistral-large-4-0` | 512K | yes | `none`, `high` |
+| `mistral-medium-latest` | `mistral-medium-3-5`, `mistral-medium-2604`, `mistral-vibe-cli-latest` | 256K | yes | `none`, `high` |
+| `mistral-small-latest` | `mistral-small-2603`, `mistral-vibe-cli-fast` | 256K | yes | `none`, `high` |
+| `zai-glm-5-3` | `zai-glm-latest`, `zai-glm-5` | 1M | no | `low`, `high`, `max` |
+| `zai-glm-5-2` | `glm-5-2` | 1M | no | all levels |
+| `mistral-large-latest` | `mistral-large-2512` | 256K | yes | no reasoning |
+| `codestral-latest` | `codestral-2508` | 256K | no | no reasoning |
+| `ministral-14b-latest` | `ministral-14b-2512` | 256K | yes | no reasoning |
+| `ministral-8b-latest` | `ministral-8b-2512` | 256K | yes | no reasoning |
+| `ministral-3b-latest` | `ministral-3b-2512` | 128K | yes | no reasoning |
+| `voxtral-small-latest` | `voxtral-small-2507` | 32K | no | no reasoning |
+
+All of them handle tool calls. Clients can send any standard `reasoning_effort` level to any model. When a model does not offer the requested level, the gateway uses the closest one it does offer, and on a tie `minimal` and `low` go down while everything else goes up: on Mistral Large 4, Medium and Small, `minimal` and `low` become `none` and the rest become `high`. Models without reasoning get the request without it. Labs models such as `labs-leanstral-1-5` only answer once an admin enables Labs models in the organization settings. Embedding, OCR and transcription models are listed too, but the gateway only serves chat.
 
 ## Setup
 

@@ -354,19 +354,26 @@ def normalize_completion(payload: bytes) -> bytes:
 
 
 def snap_reasoning_effort(body: bytes, detail: bytes) -> bytes | None:
-    """Swap a rejected reasoning_effort for the nearest value the 400 lists as supported."""
+    """Swap a rejected reasoning_effort for the nearest allowed level, or drop it if the model has none."""
     error_text = detail.decode(errors="replace")
-    if "reasoning_effort" not in error_text or "supported values" not in error_text:
+    if "reasoning_effort" not in error_text:
         return None
-    listed = error_text.split("supported values", 1)[1]
-    supported = [level for level in REASONING_EFFORT_LEVELS if f"'{level}'" in listed]
     chat_request = json.loads(body)
     requested = chat_request.get("reasoning_effort")
+    if "reasoning_effort is not enabled" in error_text and requested is not None:
+        LOG.info("reasoning_effort %s unsupported, retrying without it", requested)
+        del chat_request["reasoning_effort"]
+        return json.dumps(chat_request).encode()
+    if "is not supported" not in error_text:
+        return None
+    listed = error_text.split("is not supported", 1)[1]
+    supported = [level for level in REASONING_EFFORT_LEVELS if f"'{level}'" in listed]
     if requested not in REASONING_EFFORT_LEVELS or requested in supported or not supported:
         return None
     rank = REASONING_EFFORT_LEVELS.index(requested)
-    # On a tie the higher level wins, so a request for any reasoning keeps it on.
-    closest = min(reversed(supported), key=lambda level: abs(REASONING_EFFORT_LEVELS.index(level) - rank))
+    # On a tie, low and below lean toward less reasoning, medium and above toward more.
+    candidates = supported if requested in ("none", "minimal", "low") else reversed(supported)
+    closest = min(candidates, key=lambda level: abs(REASONING_EFFORT_LEVELS.index(level) - rank))
     LOG.info("reasoning_effort %s unsupported, retrying as %s", requested, closest)
     chat_request["reasoning_effort"] = closest
     return json.dumps(chat_request).encode()
