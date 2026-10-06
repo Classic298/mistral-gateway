@@ -632,6 +632,18 @@ class Handler(BaseHTTPRequestHandler):
             # clients that bill tokens show zero for every response.
             chat_request["stream_options"] = {"include_usage": True}
             changed = True
+        # Mistral answers these OpenAI fields with 422.
+        if "max_completion_tokens" in chat_request:
+            max_completion_tokens = chat_request.pop("max_completion_tokens")
+            if max_completion_tokens is not None:
+                chat_request["max_tokens"] = max_completion_tokens
+            changed = True
+        if "seed" in chat_request:
+            chat_request["random_seed"] = chat_request.pop("seed")
+            changed = True
+        if "user" in chat_request:
+            del chat_request["user"]
+            changed = True
         if "max_tokens" not in chat_request:
             # Mistral caps GLM completions at 4096 tokens when max_tokens is
             # absent; thinking alone eats that, so long-composition turns end
