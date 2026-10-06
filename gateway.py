@@ -641,6 +641,7 @@ class Handler(BaseHTTPRequestHandler):
         messages = chat_request.get("messages")
         if (
             "reasoning_effort" not in chat_request
+            and "glm" in str(chat_request.get("model"))
             and chat_request.get("tools")
             and isinstance(messages, list)
             and messages
