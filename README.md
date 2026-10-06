@@ -27,15 +27,15 @@ The chat models below were tested through the gateway on 2026-10-06, including t
 
 | Model | Also available as | Context | Images | Reasoning effort |
 |---|---|---|---|---|
-| `mistral-large-4` | `mistral-large-4-0` | 512K | yes | `none`, `high` |
+| `mistral-large-4` | `mistral-large-4-0` | 1M | yes | `none`, `high` |
 | `mistral-medium-latest` | `mistral-medium-3-5`, `mistral-medium-2604`, `mistral-vibe-cli-latest` | 256K | yes | `none`, `high` |
 | `mistral-small-latest` | `mistral-small-2603`, `mistral-vibe-cli-fast` | 256K | yes | `none`, `high` |
 | `zai-glm-5-3` | `zai-glm-latest`, `zai-glm-5` | 1M | no | `low`, `high`, `max` |
 | `mistral-large-latest` | `mistral-large-2512` | 256K | yes | no reasoning |
-| `codestral-latest` | `codestral-2508` | 256K | no | no reasoning |
+| `codestral-latest` | `codestral-2508` | 128K | no | no reasoning |
 | `ministral-14b-latest` | `ministral-14b-2512` | 256K | yes | no reasoning |
 | `ministral-8b-latest` | `ministral-8b-2512` | 256K | yes | no reasoning |
-| `ministral-3b-latest` | `ministral-3b-2512` | 128K | yes | no reasoning |
+| `ministral-3b-latest` | `ministral-3b-2512` | 256K | yes | no reasoning |
 | `voxtral-small-latest` | `voxtral-small-2507` | 32K | no | no reasoning |
 
 All of them handle tool calls. Clients can send any standard `reasoning_effort` level to any model. When a model does not offer the requested level, the gateway uses the closest one it does offer, and on a tie `minimal` and `low` go down while everything else goes up: on Mistral Large 4, Medium and Small, `minimal` and `low` become `none` and the rest become `high`. Models without reasoning get the request without it. Labs models such as `labs-leanstral-1-5` only answer once an admin enables Labs models in the organization settings. Embedding, OCR and transcription models are listed too, but the gateway only serves chat.
