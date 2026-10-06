@@ -31,7 +31,6 @@ The chat models below were tested through the gateway on 2026-10-06, including t
 | `mistral-medium-latest` | `mistral-medium-3-5`, `mistral-medium-2604`, `mistral-vibe-cli-latest` | 256K | yes | `none`, `high` |
 | `mistral-small-latest` | `mistral-small-2603`, `mistral-vibe-cli-fast` | 256K | yes | `none`, `high` |
 | `zai-glm-5-3` | `zai-glm-latest`, `zai-glm-5` | 1M | no | `low`, `high`, `max` |
-| `zai-glm-5-2` | `glm-5-2` | 1M | no | all levels |
 | `mistral-large-latest` | `mistral-large-2512` | 256K | yes | no reasoning |
 | `codestral-latest` | `codestral-2508` | 256K | no | no reasoning |
 | `ministral-14b-latest` | `ministral-14b-2512` | 256K | yes | no reasoning |

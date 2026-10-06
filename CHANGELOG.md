@@ -9,10 +9,15 @@ Changelog conventions:
 
 ## [1.0.2] - 2026-10-06
 
+### Added
+
+- Support for Mistral Large 4. It only offers the reasoning levels none and high, so the gateway turns minimal and low into none and everything above into high, and any level a chat app sends works.
+- Support for the models without reasoning: `mistral-large-latest`, Ministral, Codestral and Voxtral. Tool calls work on them now, and a reasoning level sent by a chat app is left out instead of causing an error.
+- The README lists the chat models you can use through the gateway, with their other names, context size, image support and the reasoning levels each one accepts. Every model in it was tested with tool calls and every reasoning level.
+
 ### Fixed
 
-- Chat apps set to a reasoning level the model does not offer (for example low or medium on Mistral Large 4, which only has none and high) now get an answer instead of an error. The gateway asks again with the closest level the model does offer, leaning toward less reasoning for minimal and low and toward more for everything else.
-- Tool calls now work on models without reasoning, such as `mistral-large-latest`, Ministral and Codestral. Their answer to a tool result used to fail with an error.
+- Chat apps set to a reasoning level that Mistral Medium, Mistral Small or GLM 5.3 does not offer now get an answer instead of an error. The gateway asks again with the closest level the model offers, leaning toward less reasoning for minimal and low and toward more for everything else.
 - Mistral Medium and Small no longer keep calling a tool instead of answering with its result. The extra reasoning the gateway asks for on those turns is now limited to GLM, which it was meant for.
 - Requests that include `max_completion_tokens`, `seed` or `user`, as newer OpenAI clients send them, no longer fail with an error.
 
