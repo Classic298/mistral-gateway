@@ -46,6 +46,7 @@ BASE_DIR = pathlib.Path(__file__).parent
 STATE_FILE = BASE_DIR / "pool_state.json"
 LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "[::1]"}
 POLL_SLEEP = 0.3
+REASONING_EFFORT_LEVELS = ["none", "minimal", "low", "medium", "high", "xhigh", "max"]
 # Rejection code -> cooldown seconds for the account that was rejected.
 # Built in main() after env files load, so gateway.env overrides apply.
 COOLDOWNS: dict[int, float] = {}
@@ -352,6 +353,25 @@ def normalize_completion(payload: bytes) -> bytes:
     return json.dumps(parsed).encode()
 
 
+def snap_reasoning_effort(body: bytes, detail: bytes) -> bytes | None:
+    """Swap a rejected reasoning_effort for the nearest value the 400 lists as supported."""
+    error_text = detail.decode(errors="replace")
+    if "reasoning_effort" not in error_text or "supported values" not in error_text:
+        return None
+    listed = error_text.split("supported values", 1)[1]
+    supported = [level for level in REASONING_EFFORT_LEVELS if f"'{level}'" in listed]
+    chat_request = json.loads(body)
+    requested = chat_request.get("reasoning_effort")
+    if requested not in REASONING_EFFORT_LEVELS or requested in supported or not supported:
+        return None
+    rank = REASONING_EFFORT_LEVELS.index(requested)
+    # On a tie the higher level wins, so a request for any reasoning keeps it on.
+    closest = min(reversed(supported), key=lambda level: abs(REASONING_EFFORT_LEVELS.index(level) - rank))
+    LOG.info("reasoning_effort %s unsupported, retrying as %s", requested, closest)
+    chat_request["reasoning_effort"] = closest
+    return json.dumps(chat_request).encode()
+
+
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
@@ -407,6 +427,9 @@ class Handler(BaseHTTPRequestHandler):
                 last_error = (error.code, detail)
                 LOG.info("key=%s rejected: %s %s", account.name, error.code, detail[:200])
                 if error.code in (400, 422):
+                    snapped_body = snap_reasoning_effort(body, detail)
+                    if snapped_body:
+                        return self._proxy_body(snapped_body, stream)
                     break
                 if error.code in COOLDOWNS:
                     POOL.mark_down(account, f"HTTP {error.code}", COOLDOWNS[error.code])

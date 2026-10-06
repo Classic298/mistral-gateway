@@ -7,6 +7,12 @@ Changelog conventions:
 
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- Chat apps set to a reasoning level the model does not offer (for example low or medium on Mistral Large 4, which only has none and high) now get an answer instead of an error. The gateway asks again with the closest level the model does offer.
+
 ## [1.0.1] - 2026-09-30
 
 ### Fixed

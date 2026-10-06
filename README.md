@@ -15,6 +15,7 @@ It uses the same key the official [Mistral Vibe CLI](https://github.com/mistrala
   - `stream_options.include_usage` is added to streaming requests so clients get token counts
   - `max_tokens` defaults to 32768 when the client sends none (Mistral's default is 4096, which reasoning models can use up before writing any visible text)
   - `reasoning_effort: "high"` is added to turns that answer a tool result, because reasoning models sometimes end those turns with empty output otherwise
+  - a `reasoning_effort` the model rejects is retried with the closest level it accepts (Mistral Large 4 only takes `none` and `high`, GLM only `low`, `high` and `max`)
 - Handles rate limits politely: on HTTP 429 it waits and retries the same key every 10 s for up to 60 s.
 - Optional fallback to a Mistral AI Studio API key when the Vibe key is rate limited or its budget is spent.
 - Records daily token usage per model in a local SQLite file (`usage.db`), readable at `/usage`.
