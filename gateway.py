@@ -647,8 +647,9 @@ class Handler(BaseHTTPRequestHandler):
         if "max_tokens" not in chat_request:
             # Mistral caps GLM completions at 4096 tokens when max_tokens is
             # absent; thinking alone eats that, so long-composition turns end
-            # mid-reasoning with no visible text.
-            chat_request["max_tokens"] = 32768
+            # mid-reasoning with no visible text. GLM can think past 32768
+            # too, so it gets its full 128K output limit.
+            chat_request["max_tokens"] = 131072 if "glm" in str(chat_request.get("model")) else 32768
             changed = True
         messages = chat_request.get("messages")
         if (

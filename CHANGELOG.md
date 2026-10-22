@@ -13,6 +13,10 @@ Changelog conventions:
 
 - GLM 5.3 Flash (`zai-glm-5-3-flash`) is listed in the README model table. It works through the gateway like GLM 5.3, including tool calls, images and every reasoning level a chat app sends.
 
+### Fixed
+
+- Long answers from GLM 5.3 and GLM 5.3 Flash no longer stop half way or come back empty when the chat app sets no length limit. GLM can spend more than 32768 tokens thinking on a long piece of writing, so the gateway now allows it the full 128K output Mistral offers for these models.
+
 ## [1.0.2] - 2026-10-06
 
 ### Added

@@ -13,7 +13,7 @@ It uses the same key the official [Mistral Vibe CLI](https://github.com/mistrala
   - reasoning models return `content` as a list of typed parts; the gateway flattens it to plain text and moves the thinking into `reasoning_content`, in both streaming and non-streaming replies
   - a final `finish_reason: "stop"` after tool-call deltas is rewritten to `tool_calls`
   - `stream_options.include_usage` is added to streaming requests so clients get token counts
-  - `max_tokens` defaults to 32768 when the client sends none (Mistral's default is 4096, which reasoning models can use up before writing any visible text)
+  - `max_tokens` defaults to 32768 when the client sends none, and to 131072 (the 128K maximum) for GLM (Mistral's default is 4096, which reasoning models can use up before writing any visible text)
   - `reasoning_effort: "high"` is added to GLM turns that answer a tool result, because GLM sometimes ends those turns with empty output otherwise
   - `max_completion_tokens` and `seed` are passed on as Mistral's `max_tokens` and `random_seed`, and `user` is left out, because Mistral rejects all three
   - a `reasoning_effort` the model rejects is retried with the closest level it accepts, or without it for models that have no reasoning (see [Models](#models))
