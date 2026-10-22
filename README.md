@@ -23,7 +23,7 @@ It uses the same key the official [Mistral Vibe CLI](https://github.com/mistrala
 
 ## Models
 
-The chat models below were tested through the gateway on 2026-10-06, including tool calls and every `reasoning_effort` level. Mistral changes the line-up from time to time; `/v1/models` always lists what your key can use.
+The chat models below were tested through the gateway on 2026-10-06 (GLM 5.3 Flash on 2026-10-23), including tool calls and every `reasoning_effort` level. Mistral changes the line-up from time to time; `/v1/models` always lists what your key can use.
 
 | Model | Also available as | Context | Images | Reasoning effort |
 |---|---|---|---|---|
@@ -31,6 +31,7 @@ The chat models below were tested through the gateway on 2026-10-06, including t
 | `mistral-medium-latest` | `mistral-medium-3-5`, `mistral-medium-2604`, `mistral-vibe-cli-latest` | 256K | yes | `none`, `high` |
 | `mistral-small-latest` | `mistral-small-2603`, `mistral-vibe-cli-fast` | 256K | yes | `none`, `high` |
 | `zai-glm-5-3` | `zai-glm-latest`, `zai-glm-5` | 1M | no | `low`, `high`, `max` |
+| `zai-glm-5-3-flash` | none | 1M | yes | `low`, `high`, `max` |
 | `mistral-large-latest` | `mistral-large-2512` | 256K | yes | no reasoning |
 | `codestral-latest` | `codestral-2508` | 128K | no | no reasoning |
 | `ministral-14b-latest` | `ministral-14b-2512` | 256K | yes | no reasoning |

@@ -7,6 +7,12 @@ Changelog conventions:
 
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- GLM 5.3 Flash (`zai-glm-5-3-flash`) is listed in the README model table. It works through the gateway like GLM 5.3, including tool calls, images and every reasoning level a chat app sends.
+
 ## [1.0.2] - 2026-10-06
 
 ### Added
