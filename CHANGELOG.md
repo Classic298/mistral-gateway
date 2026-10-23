@@ -7,7 +7,7 @@ Changelog conventions:
 
 # Changelog
 
-## [Unreleased]
+## [1.0.3] - 2026-10-23
 
 ### Added
 
@@ -43,6 +43,7 @@ Changelog conventions:
 
 - First release: a small local gateway that lets any OpenAI-compatible chat app (Open WebUI, editors, scripts) use the models in your Mistral Vibe subscription. It picks up the key from the official Vibe CLI login, streams answers live, shows reasoning models' thinking separately, handles tool calls, waits politely on rate limits, can fall back to a Mistral AI Studio key, records your daily token usage and only accepts requests from your own machine unless you set a gateway key.
 
+[1.0.3]: https://github.com/Classic298/mistral-gateway/releases/tag/v1.0.3
 [1.0.2]: https://github.com/Classic298/mistral-gateway/releases/tag/v1.0.2
 [1.0.1]: https://github.com/Classic298/mistral-gateway/releases/tag/v1.0.1
 [1.0.0]: https://github.com/Classic298/mistral-gateway/releases/tag/v1.0.0
