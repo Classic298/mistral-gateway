@@ -16,6 +16,7 @@ It uses the same key the official [Mistral Vibe CLI](https://github.com/mistrala
   - `max_tokens` defaults to 32768 when the client sends none, and to 131072 (the 128K maximum) for GLM (Mistral's default is 4096, which reasoning models can use up before writing any visible text)
   - `reasoning_effort: "high"` is added to GLM turns that answer a tool result, because GLM sometimes ends those turns with empty output otherwise
   - `max_completion_tokens` and `seed` are passed on as Mistral's `max_tokens` and `random_seed`, and `user` is left out, because Mistral rejects all three
+  - `reasoning_content` and `index` are left out of earlier assistant messages, because replies carry them but Mistral rejects them when a client sends a reply back as it came (the OpenAI SDK does this when you append the reply message, and DeepSeek's own API asks for the thinking back)
   - a `reasoning_effort` (or `reasoning.effort` on Responses) the model rejects is retried with the closest level it accepts, or without it for models that have no reasoning (see [Models](#models))
 - Responses requests are passed on unchanged apart from that reasoning level, because Mistral's Responses API already answers in the shape OpenAI clients expect. It keeps no history, so `store: true` and `previous_response_id` are rejected and the client has to send the whole conversation each time.
 - Handles rate limits politely: on HTTP 429 it waits and retries the same key every 10 s for up to 60 s.

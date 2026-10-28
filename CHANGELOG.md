@@ -14,6 +14,10 @@ Changelog conventions:
 - Support for the Responses API. Apps that use it, such as coding agents, now work with the same base URL, and the gateway passes their requests to Mistral's own Responses API. A reasoning level the model does not offer is swapped for the closest one it does, as on Chat Completions. Every model in the README table works through it with tool calls, and Mistral Large 4, GLM 5.3, GLM 5.3 Flash and DeepSeek V4.1 Flash were also tested with streaming and every reasoning level. Mistral does not store conversations there, so apps have to send the whole conversation each time.
 - DeepSeek V4.1 Flash (`deepseek-v4-1-flash-1017`) is listed in the README model table. It works through the gateway like the other reasoning models, including tool calls and every reasoning level a chat app sends, and only thinks when the app sends a reasoning level.
 
+### Fixed
+
+- Apps that add the model's reply to the conversation exactly as they got it, as the OpenAI SDK does, no longer get an error from Mistral on the next turn. Mistral refuses two fields those replies carry, the model's reasoning and, on GLM, a message index, so the gateway now leaves them out. DeepSeek-aware apps hit this on every tool call, because DeepSeek's own API asks for the reasoning back.
+
 ## [1.0.3] - 2026-10-23
 
 ### Added

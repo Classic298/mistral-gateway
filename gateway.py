@@ -664,6 +664,13 @@ class Handler(BaseHTTPRequestHandler):
             chat_request["max_tokens"] = 131072 if "glm" in str(chat_request.get("model")) else 32768
             changed = True
         messages = chat_request.get("messages")
+        if isinstance(messages, list):
+            for message in messages:
+                # Replies carry these fields, and Mistral 422s when a client sends a reply back as it came.
+                for field in ("reasoning_content", "index"):
+                    if isinstance(message, dict) and field in message:
+                        del message[field]
+                        changed = True
         if (
             "reasoning_effort" not in chat_request
             and "glm" in str(chat_request.get("model"))
