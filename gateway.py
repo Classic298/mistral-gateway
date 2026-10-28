@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Local OpenAI-compatible gateway for a Mistral Vibe subscription.
 
-Bridges OpenAI-style /v1/chat/completions clients to Mistral using your
-Vibe plan key (from `vibe --setup` or copied into VIBE_KEY from
+Bridges OpenAI-style /v1/chat/completions and /v1/responses clients to
+Mistral's endpoint of the same name using your Vibe plan key (from
+`vibe --setup` or copied into VIBE_KEY from
 https://chat.mistral.ai/code/extensions), with an optional Mistral AI
 Studio API key as pay-as-you-go fallback.
 
@@ -39,12 +40,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 LOG = logging.getLogger("mistral-gateway")
 
 MISTRAL_CHAT_URL = "https://api.mistral.ai/v1/chat/completions"
+MISTRAL_RESPONSES_URL = "https://api.mistral.ai/v1/responses"
 MISTRAL_MODELS_URL = "https://api.mistral.ai/v1/models"
 MISTRAL_WHOAMI_URL = "https://console.mistral.ai/api/vibe/whoami"
 
 BASE_DIR = pathlib.Path(__file__).parent
 STATE_FILE = BASE_DIR / "pool_state.json"
 LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "[::1]"}
+RESPONSES_ROUTES = ("/v1/responses", "/v1/responses/", "/responses")
 POLL_SLEEP = 0.3
 REASONING_EFFORT_LEVELS = ["none", "minimal", "low", "medium", "high", "xhigh", "max"]
 # Rejection code -> cooldown seconds for the account that was rejected.
@@ -185,10 +188,10 @@ def usage_db() -> sqlite3.Connection:
 def record_usage(model: str, account: str, usage: dict) -> None:
     """Upsert one request's usage into today's row; errors never kill a reply."""
     day = time.strftime("%Y-%m-%d")
-    prompt = int(usage.get("prompt_tokens") or 0)
-    details = usage.get("prompt_tokens_details") or {}
+    prompt = int(usage.get("prompt_tokens") or usage.get("input_tokens") or 0)
+    details = usage.get("prompt_tokens_details") or usage.get("input_tokens_details") or {}
     cached = int(details.get("cached_tokens") or 0) if isinstance(details, dict) else 0
-    completion = int(usage.get("completion_tokens") or 0)
+    completion = int(usage.get("completion_tokens") or usage.get("output_tokens") or 0)
     with USAGE_DB_LOCK:
         try:
             with usage_db() as connection:
@@ -316,7 +319,7 @@ def normalize_stream_event(event: bytes, saw_tool_call: bool = False) -> tuple[b
 
 def parse_event(event: bytes) -> dict | None:
     try:
-        parsed = json.loads(event[6:].strip())
+        parsed = json.loads(event.partition(b"data:")[2])  # Responses events start with an event: line
     except ValueError:
         return None
     return parsed if isinstance(parsed, dict) else None
@@ -359,10 +362,13 @@ def snap_reasoning_effort(body: bytes, detail: bytes) -> bytes | None:
     if "reasoning_effort" not in error_text:
         return None
     chat_request = json.loads(body)
-    requested = chat_request.get("reasoning_effort")
+    # Responses requests nest the level as reasoning.effort.
+    reasoning = chat_request.get("reasoning")
+    effort_owner, effort_key = (reasoning, "effort") if isinstance(reasoning, dict) else (chat_request, "reasoning_effort")
+    requested = effort_owner.get(effort_key)
     if "reasoning_effort is not enabled" in error_text and requested is not None:
         LOG.info("reasoning_effort %s unsupported, retrying without it", requested)
-        del chat_request["reasoning_effort"]
+        del effort_owner[effort_key]
         return json.dumps(chat_request).encode()
     if "is not supported" not in error_text:
         return None
@@ -375,7 +381,7 @@ def snap_reasoning_effort(body: bytes, detail: bytes) -> bytes | None:
     candidates = supported if requested in ("none", "minimal", "low") else reversed(supported)
     closest = min(candidates, key=lambda level: abs(REASONING_EFFORT_LEVELS.index(level) - rank))
     LOG.info("reasoning_effort %s unsupported, retrying as %s", requested, closest)
-    chat_request["reasoning_effort"] = closest
+    effort_owner[effort_key] = closest
     return json.dumps(chat_request).encode()
 
 
@@ -420,10 +426,11 @@ class Handler(BaseHTTPRequestHandler):
     def _proxy_body(self, body: bytes, stream: bool) -> None:
         """Try accounts in pool order; stream the winning response downstream."""
         last_error = None
+        url = MISTRAL_RESPONSES_URL if self.path in RESPONSES_ROUTES else MISTRAL_CHAT_URL
         for account in POOL.accounts_for():
             try:
                 upstream = upstream_request_with_retry(
-                    MISTRAL_CHAT_URL, account.key, account.name, body
+                    url, account.key, account.name, body
                 )
             except urllib.error.HTTPError as error:
                 try:
@@ -497,6 +504,7 @@ class Handler(BaseHTTPRequestHandler):
                         sent += len(event)
                         self.wfile.flush()
                         event_json = parse_event(event) or {}
+                        event_json = event_json.get("response") or event_json
                         stream_model = event_json.get("model") or stream_model
                         stream_usage = event_json.get("usage") or stream_usage
                 if pending and is_cut_event(pending):
@@ -508,6 +516,7 @@ class Handler(BaseHTTPRequestHandler):
                     sent += len(tail_event)
                     self.wfile.flush()
                     event_json = parse_event(tail_event) or {}
+                    event_json = event_json.get("response") or event_json
                     stream_model = event_json.get("model") or stream_model
                     stream_usage = event_json.get("usage") or stream_usage
                 LOG.info("stream complete: key=%s forwarded=%dB tool_calls=%s", account.name, sent, saw_tool_call)
@@ -605,7 +614,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._reply(403, {"error": {"message": "forbidden host"}})
         if not self._authorized():
             return self._reply(401, {"error": {"message": "unauthorized"}})
-        if self.path not in ("/v1/chat/completions", "/v1/chat/completions/", "/chat/completions"):
+        if self.path not in ("/v1/chat/completions", "/v1/chat/completions/", "/chat/completions") + RESPONSES_ROUTES:
             return self._reply(404, {"error": {"message": f"unknown route {self.path}"}})
         if "chunked" in self.headers.get("Transfer-Encoding", "").lower():
             return self._reply(411, {"error": {"message": "Content-Length required"}})
@@ -626,6 +635,9 @@ class Handler(BaseHTTPRequestHandler):
         if not isinstance(chat_request, dict):
             return self._reply(400, {"error": {"message": "invalid JSON body"}})
         stream = bool(chat_request.get("stream"))
+        if self.path in RESPONSES_ROUTES:
+            self._request_model = chat_request.get("model") or "unknown"
+            return self._proxy_body(body, stream)
         changed = False
         if stream and "stream_options" not in chat_request:
             # Without include_usage the final usage chunk never arrives, and

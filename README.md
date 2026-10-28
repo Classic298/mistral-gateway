@@ -8,7 +8,7 @@ It uses the same key the official [Mistral Vibe CLI](https://github.com/mistrala
 
 ## What it does
 
-- Exposes `/v1/chat/completions` and `/v1/models` on `127.0.0.1:8788`, so a client only needs a base URL.
+- Exposes `/v1/chat/completions`, `/v1/responses` and `/v1/models` on `127.0.0.1:8788`, so a client only needs a base URL. Chat Completions requests go to Mistral's Chat Completions API and Responses requests to Mistral's Responses API.
 - Fixes wire-format differences that break OpenAI clients:
   - reasoning models return `content` as a list of typed parts; the gateway flattens it to plain text and moves the thinking into `reasoning_content`, in both streaming and non-streaming replies
   - a final `finish_reason: "stop"` after tool-call deltas is rewritten to `tool_calls`
@@ -16,14 +16,15 @@ It uses the same key the official [Mistral Vibe CLI](https://github.com/mistrala
   - `max_tokens` defaults to 32768 when the client sends none, and to 131072 (the 128K maximum) for GLM (Mistral's default is 4096, which reasoning models can use up before writing any visible text)
   - `reasoning_effort: "high"` is added to GLM turns that answer a tool result, because GLM sometimes ends those turns with empty output otherwise
   - `max_completion_tokens` and `seed` are passed on as Mistral's `max_tokens` and `random_seed`, and `user` is left out, because Mistral rejects all three
-  - a `reasoning_effort` the model rejects is retried with the closest level it accepts, or without it for models that have no reasoning (see [Models](#models))
+  - a `reasoning_effort` (or `reasoning.effort` on Responses) the model rejects is retried with the closest level it accepts, or without it for models that have no reasoning (see [Models](#models))
+- Responses requests are passed on unchanged apart from that reasoning level, because Mistral's Responses API already answers in the shape OpenAI clients expect. It keeps no history, so `store: true` and `previous_response_id` are rejected and the client has to send the whole conversation each time.
 - Handles rate limits politely: on HTTP 429 it waits and retries the same key every 10 s for up to 60 s.
 - Optional fallback to a Mistral AI Studio API key when the Vibe key is rate limited or its budget is spent.
 - Records daily token usage per model in a local SQLite file (`usage.db`), readable at `/usage`.
 
 ## Models
 
-The chat models below were tested through the gateway on 2026-10-06 (GLM 5.3 Flash on 2026-10-23, DeepSeek V4.1 Flash on 2026-10-28), including tool calls and every `reasoning_effort` level. Mistral changes the line-up from time to time; `/v1/models` always lists what your key can use.
+The chat models below were tested through the gateway on 2026-10-06 (GLM 5.3 Flash on 2026-10-23, DeepSeek V4.1 Flash on 2026-10-28), including tool calls and every `reasoning_effort` level. Every model in the table was also tested with tool calls over `/v1/responses` on 2026-10-28, and Mistral Large 4, GLM 5.3, GLM 5.3 Flash and DeepSeek V4.1 Flash with streaming and every reasoning level too. Mistral changes the line-up from time to time; `/v1/models` always lists what your key can use.
 
 | Model | Also available as | Context | Images | Reasoning effort |
 |---|---|---|---|---|
@@ -120,7 +121,7 @@ Settings come from environment variables or from a `gateway.env` file next to `g
 | `COOLDOWN_429` / `COOLDOWN_DEAD` | `60` / `21600` | Seconds a key is skipped after rate limiting / after 401 or 402. |
 | `LOG_LEVEL` | `INFO` | Python logging level. |
 
-Endpoints: `/v1/chat/completions`, `/v1/models`, `/health`, `/pool/status` (which key is serving, cooldowns) and `/usage?days=N`.
+Endpoints: `/v1/chat/completions`, `/v1/responses`, `/v1/models`, `/health`, `/pool/status` (which key is serving, cooldowns) and `/usage?days=N`.
 
 ## Terms of service
 
