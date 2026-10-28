@@ -23,7 +23,7 @@ It uses the same key the official [Mistral Vibe CLI](https://github.com/mistrala
 
 ## Models
 
-The chat models below were tested through the gateway on 2026-10-06 (GLM 5.3 Flash on 2026-10-23), including tool calls and every `reasoning_effort` level. Mistral changes the line-up from time to time; `/v1/models` always lists what your key can use.
+The chat models below were tested through the gateway on 2026-10-06 (GLM 5.3 Flash on 2026-10-23, DeepSeek V4.1 Flash on 2026-10-28), including tool calls and every `reasoning_effort` level. Mistral changes the line-up from time to time; `/v1/models` always lists what your key can use.
 
 | Model | Also available as | Context | Images | Reasoning effort |
 |---|---|---|---|---|
@@ -32,6 +32,7 @@ The chat models below were tested through the gateway on 2026-10-06 (GLM 5.3 Fla
 | `mistral-small-latest` | `mistral-small-2603`, `mistral-vibe-cli-fast` | 256K | yes | `none`, `high` |
 | `zai-glm-5-3` | `zai-glm-latest`, `zai-glm-5` | 1M | no | `low`, `high`, `max` |
 | `zai-glm-5-3-flash` | none | 1M | yes | `low`, `high`, `max` |
+| `deepseek-v4-1-flash-1017` | none | 1M | no | `none`, `low`, `high`, `xhigh`, `max` |
 | `mistral-large-latest` | `mistral-large-2512` | 256K | yes | no reasoning |
 | `codestral-latest` | `codestral-2508` | 128K | no | no reasoning |
 | `ministral-14b-latest` | `ministral-14b-2512` | 256K | yes | no reasoning |
@@ -39,7 +40,7 @@ The chat models below were tested through the gateway on 2026-10-06 (GLM 5.3 Fla
 | `ministral-3b-latest` | `ministral-3b-2512` | 256K | yes | no reasoning |
 | `voxtral-small-latest` | `voxtral-small-2507` | 32K | no | no reasoning |
 
-All of them handle tool calls. Clients can send any standard `reasoning_effort` level to any model. When a model does not offer the requested level, the gateway uses the closest one it does offer, and on a tie `minimal` and `low` go down while everything else goes up: on Mistral Large 4, Medium and Small, `minimal` and `low` become `none` and the rest become `high`. Models without reasoning get the request without it. Labs models such as `labs-leanstral-1-5` only answer once an admin enables Labs models in the organization settings. Embedding, OCR and transcription models are listed too, but the gateway only serves chat.
+All of them handle tool calls. Clients can send any standard `reasoning_effort` level to any model. When a model does not offer the requested level, the gateway uses the closest one it does offer, and on a tie `minimal` and `low` go down while everything else goes up: on Mistral Large 4, Medium and Small, `minimal` and `low` become `none` and the rest become `high`. Models without reasoning get the request without it. DeepSeek V4.1 Flash only thinks when the client sends a reasoning level. Mistral's docs list it as `deepseek-v4-flash-1017`, but the API only accepts `deepseek-v4-1-flash-1017`. Labs models such as `labs-leanstral-1-5` only answer once an admin enables Labs models in the organization settings. Embedding, OCR and transcription models are listed too, but the gateway only serves chat.
 
 ## Setup
 

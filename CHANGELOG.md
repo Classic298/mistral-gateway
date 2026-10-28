@@ -7,6 +7,12 @@ Changelog conventions:
 
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- DeepSeek V4.1 Flash (`deepseek-v4-1-flash-1017`) is listed in the README model table. It works through the gateway like the other reasoning models, including tool calls and every reasoning level a chat app sends, and only thinks when the app sends a reasoning level.
+
 ## [1.0.3] - 2026-10-23
 
 ### Added
