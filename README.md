@@ -77,7 +77,7 @@ Requirements: Python 3.10+ and a Mistral Vibe plan with coding included (Pro, Te
 
 ### Open WebUI
 
-1. Go to **Admin Panel › Settings › Connections** and click ➕ (**Add Connection**) next to **Manage OpenAI API Connections**.
+1. Open **Settings** and pick **Connections** in the **Admin** part of the list (older versions: **Admin Panel › Settings › Connections**). Click ➕ (**Add Connection**) next to **Manage OpenAI API Connections**.
 2. Enter the URL and API key for your setup (pick the one that matches below) and click **Save**.
 3. Open the model selector. Every model your plan includes shows up, for example `zai-glm-5-3-flash`.
 
