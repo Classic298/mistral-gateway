@@ -48,38 +48,54 @@ All of them handle tool calls. Clients can send any standard `reasoning_effort` 
 
 Requirements: Python 3.10+ and a Mistral Vibe plan with coding included (Pro, Team or Enterprise).
 
-1. Install the official Vibe CLI (see the [Mistral Vibe repository](https://github.com/mistralai/mistral-vibe) for other install methods):
+1. Get the gateway:
+
+   ```sh
+   git clone https://github.com/Classic298/mistral-gateway.git
+   cd mistral-gateway
+   ```
+
+2. Get your Vibe key. There are two ways, pick one.
+
+   **Option A: log in with the Vibe CLI.** Install the official Vibe CLI (see the [Mistral Vibe repository](https://github.com/mistralai/mistral-vibe) for other install methods) and log in with your Mistral account, picking the browser login in the setup wizard:
 
    ```sh
    curl -LsSf https://mistral.ai/vibe/install.sh | bash
-   ```
-
-2. Log in with your Mistral account. Pick the browser login in the setup wizard:
-
-   ```sh
    vibe --setup
    ```
 
    The CLI stores your plan key in `~/.vibe/.env`. The gateway reads it from there, so you never copy the key by hand.
 
-   Without the CLI: open [Code › Extensions](https://chat.mistral.ai/code/extensions) in Vibe, expand **Advanced** on the Vibe CLI card and copy the **Vibe API Key**. Put it in `gateway.env` as `VIBE_KEY=...`. The same panel shows your monthly usage and lets you rotate the key.
-
-3. Get the gateway and start it:
+   **Option B: copy it from the website.** No CLI needed. Open [Code › Extensions](https://chat.mistral.ai/code/extensions) in Vibe, expand **Advanced** on the Vibe CLI card and copy the **Vibe API Key**. The same panel shows your monthly usage and lets you rotate the key. Then create `gateway.env` next to `gateway.py`:
 
    ```sh
-   git clone https://github.com/Classic298/mistral-gateway.git
-   cd mistral-gateway
+   VIBE_KEY=your-vibe-key
+   ```
+
+   ![Copying the Vibe API Key from Code › Extensions](assets/vibe-key.gif)
+
+3. Optional: add a Studio API key as a fallback for when the Vibe key is rate limited or its monthly budget is spent. In the Mistral admin panel, open **API › API Keys** and click **New key**, then add it to `gateway.env`:
+
+   ```sh
+   STUDIO_API_KEY=your-studio-key
+   ```
+
+   ![Creating a Studio API key under API › API Keys](assets/studio-key.png)
+
+4. Start the gateway:
+
+   ```sh
    python3 gateway.py
    ```
 
-   The log shows your plan name when the key works:
+   The log shows your plan name when the key works, and lists `studio` too if you added one:
 
    ```
    INFO vibe plan: ... (...)
    INFO mistral gateway on 127.0.0.1:8788 (keys: vibe)
    ```
 
-4. Point your client at it:
+5. Point your client at it:
 
    - Base URL: `http://127.0.0.1:8788/v1`
    - API key: anything (or the value of `GATEWAY_KEY` if you set one)
