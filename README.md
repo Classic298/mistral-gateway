@@ -6,44 +6,6 @@ It uses the same key the official [Mistral Vibe CLI](https://github.com/mistrala
 
 > **Unofficial project.** Not affiliated with, endorsed by or supported by Mistral AI. Read the "Terms of service" section below before using it.
 
-## What it does
-
-- Exposes `/v1/chat/completions`, `/v1/responses` and `/v1/models` on `127.0.0.1:8788`, so a client only needs a base URL. Chat Completions requests go to Mistral's Chat Completions API and Responses requests to Mistral's Responses API.
-- Fixes wire-format differences that break OpenAI clients:
-  - reasoning models return `content` as a list of typed parts; the gateway flattens it to plain text and moves the thinking into `reasoning_content`, in both streaming and non-streaming replies
-  - a final `finish_reason: "stop"` after tool-call deltas is rewritten to `tool_calls`
-  - `stream_options.include_usage` is added to streaming requests so clients get token counts
-  - `max_tokens` defaults to 32768 when the client sends none, and to 131072 (the 128K maximum) for GLM (Mistral's default is 4096, which reasoning models can use up before writing any visible text)
-  - `reasoning_effort: "high"` is added to GLM turns that answer a tool result, because GLM sometimes ends those turns with empty output otherwise
-  - `max_completion_tokens` and `seed` are passed on as Mistral's `max_tokens` and `random_seed`, and `user` is left out, because Mistral rejects all three
-  - `reasoning_content` and `index` are left out of earlier assistant messages, because replies carry them but Mistral rejects them when a client sends a reply back as it came (the OpenAI SDK does this when you append the reply message, and DeepSeek's own API asks for the thinking back)
-  - a `reasoning_effort` (or `reasoning.effort` on Responses) the model rejects is retried with the closest level it accepts, or without it for models that have no reasoning (see [Models](#models))
-- Responses requests are passed on unchanged apart from that reasoning level, because Mistral's Responses API already answers in the shape OpenAI clients expect. It keeps no history, so `store: true` and `previous_response_id` are rejected and the client has to send the whole conversation each time.
-- Handles rate limits politely: on HTTP 429 it waits and retries the same key every 10 s for up to 60 s.
-- Optional fallback to a Mistral AI Studio API key when the Vibe key is rate limited or its budget is spent.
-- Records daily token usage per model in a local SQLite file (`usage.db`), readable at `/usage`.
-
-## Models
-
-The chat models below were tested through the gateway on 2026-10-06 (GLM 5.3 Flash on 2026-10-23, DeepSeek V4.1 Flash on 2026-10-28), including tool calls and every `reasoning_effort` level. Every model in the table was also tested with tool calls over `/v1/responses` on 2026-10-28, and Mistral Large 4, GLM 5.3, GLM 5.3 Flash and DeepSeek V4.1 Flash with streaming and every reasoning level too. Mistral changes the line-up from time to time; `/v1/models` always lists what your key can use.
-
-| Model | Also available as | Context | Images | Reasoning effort |
-|---|---|---|---|---|
-| `mistral-large-4` | `mistral-large-4-0` | 1M | yes | `none`, `high` |
-| `mistral-medium-latest` | `mistral-medium-3-5`, `mistral-medium-2604`, `mistral-vibe-cli-latest` | 256K | yes | `none`, `high` |
-| `mistral-small-latest` | `mistral-small-2603`, `mistral-vibe-cli-fast` | 256K | yes | `none`, `high` |
-| `zai-glm-5-3` | `zai-glm-latest`, `zai-glm-5` | 1M | no | `low`, `high`, `max` |
-| `zai-glm-5-3-flash` | none | 1M | yes | `low`, `high`, `max` |
-| `deepseek-v4-1-flash-1017` | none | 1M | no | `none`, `low`, `high`, `xhigh`, `max` |
-| `mistral-large-latest` | `mistral-large-2512` | 256K | yes | no reasoning |
-| `codestral-latest` | `codestral-2508` | 128K | no | no reasoning |
-| `ministral-14b-latest` | `ministral-14b-2512` | 256K | yes | no reasoning |
-| `ministral-8b-latest` | `ministral-8b-2512` | 256K | yes | no reasoning |
-| `ministral-3b-latest` | `ministral-3b-2512` | 256K | yes | no reasoning |
-| `voxtral-small-latest` | `voxtral-small-2507` | 32K | no | no reasoning |
-
-All of them handle tool calls. Clients can send any standard `reasoning_effort` level to any model. When a model does not offer the requested level, the gateway uses the closest one it does offer, and on a tie `minimal` and `low` go down while everything else goes up: on Mistral Large 4, Medium and Small, `minimal` and `low` become `none` and the rest become `high`. Models without reasoning get the request without it. DeepSeek V4.1 Flash only thinks when the client sends a reasoning level. Mistral's docs list it as `deepseek-v4-flash-1017`, but the API only accepts `deepseek-v4-1-flash-1017`. Labs models such as `labs-leanstral-1-5` only answer once an admin enables Labs models in the organization settings. Embedding, OCR and transcription models are listed too, but the gateway only serves chat.
-
 ## Setup
 
 Requirements: Python 3.10+ and a Mistral Vibe plan with coding included (Pro, Team or Enterprise).
@@ -211,6 +173,27 @@ systemctl --user enable --now mistral-gateway
 journalctl --user -u mistral-gateway -f
 ```
 
+## Models
+
+The chat models below were tested through the gateway on 2026-10-06 (GLM 5.3 Flash on 2026-10-23, DeepSeek V4.1 Flash on 2026-10-28), including tool calls and every `reasoning_effort` level. Every model in the table was also tested with tool calls over `/v1/responses` on 2026-10-28, and Mistral Large 4, GLM 5.3, GLM 5.3 Flash and DeepSeek V4.1 Flash with streaming and every reasoning level too. Mistral changes the line-up from time to time; `/v1/models` always lists what your key can use.
+
+| Model | Also available as | Context | Images | Reasoning effort |
+|---|---|---|---|---|
+| `mistral-large-4` | `mistral-large-4-0` | 1M | yes | `none`, `high` |
+| `mistral-medium-latest` | `mistral-medium-3-5`, `mistral-medium-2604`, `mistral-vibe-cli-latest` | 256K | yes | `none`, `high` |
+| `mistral-small-latest` | `mistral-small-2603`, `mistral-vibe-cli-fast` | 256K | yes | `none`, `high` |
+| `zai-glm-5-3` | `zai-glm-latest`, `zai-glm-5` | 1M | no | `low`, `high`, `max` |
+| `zai-glm-5-3-flash` | none | 1M | yes | `low`, `high`, `max` |
+| `deepseek-v4-1-flash-1017` | none | 1M | no | `none`, `low`, `high`, `xhigh`, `max` |
+| `mistral-large-latest` | `mistral-large-2512` | 256K | yes | no reasoning |
+| `codestral-latest` | `codestral-2508` | 128K | no | no reasoning |
+| `ministral-14b-latest` | `ministral-14b-2512` | 256K | yes | no reasoning |
+| `ministral-8b-latest` | `ministral-8b-2512` | 256K | yes | no reasoning |
+| `ministral-3b-latest` | `ministral-3b-2512` | 256K | yes | no reasoning |
+| `voxtral-small-latest` | `voxtral-small-2507` | 32K | no | no reasoning |
+
+All of them handle tool calls. Clients can send any standard `reasoning_effort` level to any model. When a model does not offer the requested level, the gateway uses the closest one it does offer, and on a tie `minimal` and `low` go down while everything else goes up: on Mistral Large 4, Medium and Small, `minimal` and `low` become `none` and the rest become `high`. Models without reasoning get the request without it. DeepSeek V4.1 Flash only thinks when the client sends a reasoning level. Mistral's docs list it as `deepseek-v4-flash-1017`, but the API only accepts `deepseek-v4-1-flash-1017`. Labs models such as `labs-leanstral-1-5` only answer once an admin enables Labs models in the organization settings. Embedding, OCR and transcription models are listed too, but the gateway only serves chat.
+
 ## Configuration
 
 Settings come from environment variables or from a `gateway.env` file next to `gateway.py` (see `gateway.env.example`; `gateway.env` wins over the environment).
@@ -253,3 +236,13 @@ This software is provided "as is" under the [PolyForm Noncommercial License 1.0.
 [PolyForm Noncommercial 1.0.0](LICENSE): free for personal, hobby, research and other noncommercial use. Commercial use is not permitted.
 
 It is noncommercial because a Mistral Vibe subscription is a consumer plan: Mistral's consumer terms only cover "your personal use as a consumer", and business use falls under their separate [Commercial Terms of Service](https://legal.mistral.ai/terms/commercial-terms-of-service).
+
+## What it does
+
+- Serves `/v1/chat/completions`, `/v1/responses` and `/v1/models` on `127.0.0.1:8788` and passes them to Mistral's matching APIs.
+- Fixes the places where Mistral's replies and accepted fields differ from OpenAI's, so reasoning, tool calls, token counts and long answers work in OpenAI clients.
+- Swaps a reasoning level a model does not offer for the closest one it does.
+- On a rate limit, retries the same key for up to 60 s. If the Vibe key stays rate limited or its budget is spent, it falls back to your Studio key if you set one.
+- Records daily token usage per model, readable at `/usage`.
+
+Mistral's Responses API keeps no history, so clients have to send the whole conversation each time.
