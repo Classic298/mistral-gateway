@@ -78,8 +78,9 @@ Requirements: Python 3.10+ and a Mistral Vibe plan with coding included (Pro, Te
 ### Open WebUI
 
 1. Open **Settings** and pick **Connections** in the **Admin** part of the list (older versions: **Admin Panel › Settings › Connections**). Click ➕ (**Add Connection**) next to **Manage OpenAI API Connections**.
-2. Enter the URL for your setup (pick the one that matches below). As the API key, enter your `GATEWAY_KEY` if you set one, otherwise any placeholder such as `none`. Click **Save**.
-3. Open the model selector. Every model your plan includes shows up, for example `zai-glm-5-3-flash`.
+2. Enter the URL for your setup (pick the one that matches below). As the API key, enter your `GATEWAY_KEY` if you set one, otherwise any placeholder such as `none`.
+3. Optional, but recommended: your plan includes dozens of models, including embedding, OCR and transcription models that cannot chat. In the same window, add only the ones you want under **Model IDs** (for example `zai-glm-5-3-flash`), so the model selector stays short. Leave it empty to get all of them.
+4. Click **Save** and open the model selector. Your models show up there.
 
 Which URL to use depends on how you run Open WebUI. Click the one that matches:
 
