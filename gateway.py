@@ -50,6 +50,21 @@ LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "[::1]"}
 RESPONSES_ROUTES = ("/v1/responses", "/v1/responses/", "/responses")
 POLL_SLEEP = 0.3
 REASONING_EFFORT_LEVELS = ["none", "minimal", "low", "medium", "high", "xhigh", "max"]
+# Gateway-only names -> the model Mistral serves them as.
+MODEL_ALIASES = {
+    "mistral-large": "mistral-large-4",
+    "mistral-large-latest": "mistral-large-4",
+    "deepseek-v4.1-flash": "deepseek-v4-1-flash-1017",
+    "deepseek-v4.1-flash-1017": "deepseek-v4-1-flash-1017",
+    "deepseek-v4-1-flash": "deepseek-v4-1-flash-1017",
+    "deepseek-v4-flash-1017": "deepseek-v4-1-flash-1017",
+    "zai-glm-5.3": "zai-glm-5-3",
+    "zai-glm-5.3-flash": "zai-glm-5-3-flash",
+    "glm-5.3": "zai-glm-5-3",
+    "glm-5.3-flash": "zai-glm-5-3-flash",
+    "zai-glm-5.2": "zai-glm-5-2",
+    "glm-5.2": "zai-glm-5-2",
+}
 # Rejection code -> cooldown seconds for the account that was rejected.
 # Built in main() after env files load, so gateway.env overrides apply.
 COOLDOWNS: dict[int, float] = {}
@@ -317,6 +332,17 @@ def normalize_stream_event(event: bytes, saw_tool_call: bool = False) -> tuple[b
     return b"data: " + json.dumps(parsed).encode() + separator + tail, saw_tool_call
 
 
+def add_alias_models(models: dict) -> dict:
+    """List each gateway alias as a model of its own, replacing any upstream entry of that name."""
+    upstream_models = {model["id"]: model for model in models.get("data", [])}
+    listed = [model for model in models.get("data", []) if model["id"] not in MODEL_ALIASES]
+    for alias, model_id in MODEL_ALIASES.items():
+        if model_id in upstream_models:
+            listed.append({**upstream_models[model_id], "id": alias})
+    models["data"] = listed
+    return models
+
+
 def parse_event(event: bytes) -> dict | None:
     try:
         parsed = json.loads(event.partition(b"data:")[2])  # Responses events start with an event: line
@@ -570,7 +596,7 @@ class Handler(BaseHTTPRequestHandler):
                     continue
                 finally:
                     upstream.close()
-                return self._reply(200, models)
+                return self._reply(200, add_alias_models(models))
             return self._reply(502, {"error": {"message": "all keys failed"}})
         if route == "/pool/status":
             now = time.time()
@@ -634,6 +660,10 @@ class Handler(BaseHTTPRequestHandler):
             chat_request = None
         if not isinstance(chat_request, dict):
             return self._reply(400, {"error": {"message": "invalid JSON body"}})
+        aliased_model = MODEL_ALIASES.get(str(chat_request.get("model")))
+        if aliased_model:
+            chat_request["model"] = aliased_model
+            body = json.dumps(chat_request).encode()
         stream = bool(chat_request.get("stream"))
         if self.path in RESPONSES_ROUTES:
             self._request_model = chat_request.get("model") or "unknown"

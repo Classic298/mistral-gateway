@@ -7,6 +7,16 @@ Changelog conventions:
 
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- Easier model names. GLM models also answer to their dotted names, such as `glm-5.3-flash` and `zai-glm-5.3`. DeepSeek V4.1 Flash answers to `deepseek-v4.1-flash`, `deepseek-v4-1-flash` and `deepseek-v4-flash-1017`, the name Mistral's docs use. `mistral-large` and `mistral-large-latest` give you Mistral Large 4. The new names appear in the model list too, so apps can pick them.
+
+### Changed
+
+- `mistral-large-latest` now gives you Mistral Large 4 instead of the older Mistral Large 3 (`mistral-large-2512`). Use `mistral-large-2512` to keep the older model.
+
 ## [1.0.4] - 2026-10-28
 
 ### Added

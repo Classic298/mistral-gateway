@@ -180,20 +180,20 @@ Every model below was tested through the gateway with tool calls and every reaso
 
 | Model | Also available as | Context | Images | Reasoning effort |
 |---|---|---|---|---|
-| `mistral-large-4` | `mistral-large-4-0` | 1M | yes | `none`, `high` |
+| `mistral-large-4` | `mistral-large-4-0`, `mistral-large`, `mistral-large-latest` | 1M | yes | `none`, `high` |
 | `mistral-medium-latest` | `mistral-medium-3-5`, `mistral-medium-2604`, `mistral-vibe-cli-latest` | 256K | yes | `none`, `high` |
 | `mistral-small-latest` | `mistral-small-2603`, `mistral-vibe-cli-fast` | 256K | yes | `none`, `high` |
-| `zai-glm-5-3` | `zai-glm-latest`, `zai-glm-5` | 1M | no | `low`, `high`, `max` |
-| `zai-glm-5-3-flash` | none | 1M | yes | `low`, `high`, `max` |
-| `deepseek-v4-1-flash-1017` | none | 1M | no | `none`, `low`, `high`, `xhigh`, `max` |
-| `mistral-large-latest` | `mistral-large-2512` | 256K | yes | no reasoning |
+| `zai-glm-5-3` | `zai-glm-latest`, `zai-glm-5`, `zai-glm-5.3`, `glm-5.3` | 1M | no | `low`, `high`, `max` |
+| `zai-glm-5-3-flash` | `zai-glm-5.3-flash`, `glm-5.3-flash` | 1M | yes | `low`, `high`, `max` |
+| `deepseek-v4-1-flash-1017` | `deepseek-v4.1-flash`, `deepseek-v4.1-flash-1017`, `deepseek-v4-1-flash`, `deepseek-v4-flash-1017` | 1M | no | `none`, `low`, `high`, `xhigh`, `max` |
+| `mistral-large-2512` | none | 256K | yes | no reasoning |
 | `codestral-latest` | `codestral-2508` | 128K | no | no reasoning |
 | `ministral-14b-latest` | `ministral-14b-2512` | 256K | yes | no reasoning |
 | `ministral-8b-latest` | `ministral-8b-2512` | 256K | yes | no reasoning |
 | `ministral-3b-latest` | `ministral-3b-2512` | 256K | yes | no reasoning |
 | `voxtral-small-latest` | `voxtral-small-2507` | 32K | no | no reasoning |
 
-All of them handle tool calls. Clients can send any standard `reasoning_effort` level to any model. When a model does not offer the requested level, the gateway uses the closest one it does offer, and on a tie `minimal` and `low` go down while everything else goes up: on Mistral Large 4, Medium and Small, `minimal` and `low` become `none` and the rest become `high`. Models without reasoning get the request without it. DeepSeek V4.1 Flash only thinks when the client sends a reasoning level. Mistral's docs list it as `deepseek-v4-flash-1017`, but the API only accepts `deepseek-v4-1-flash-1017`. Labs models such as `labs-leanstral-1-5` only answer once an admin enables Labs models in the organization settings. Embedding, OCR and transcription models are listed too, but the gateway only serves chat.
+All of them handle tool calls. Clients can send any standard `reasoning_effort` level to any model. When a model does not offer the requested level, the gateway uses the closest one it does offer, and on a tie `minimal` and `low` go down while everything else goes up: on Mistral Large 4, Medium and Small, `minimal` and `low` become `none` and the rest become `high`. Models without reasoning get the request without it. DeepSeek V4.1 Flash only thinks when the client sends a reasoning level. The dotted names, `mistral-large`, `deepseek-v4-1-flash` and `deepseek-v4-flash-1017` (the name in Mistral's docs) are gateway aliases. `mistral-large-latest` points to Large 4 here, while Mistral's own API still maps it to `mistral-large-2512`. Labs models such as `labs-leanstral-1-5` only answer once an admin enables Labs models in the organization settings. Embedding, OCR and transcription models are listed too, but the gateway only serves chat.
 
 ## Configuration
 
