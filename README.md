@@ -88,6 +88,8 @@ Requirements: Python 3.10+ and a Mistral Vibe plan with coding included (Pro, Te
    python3 gateway.py
    ```
 
+   It runs the same on Linux, macOS and Windows (on Windows the command is usually `py gateway.py`). Keep the terminal open while you use it, or see [Run it as a service](#run-it-as-a-service-linux-optional) on Linux.
+
    The log shows your plan name when the key works, and lists `studio` too if you added one:
 
    ```
@@ -110,6 +112,93 @@ Requirements: Python 3.10+ and a Mistral Vibe plan with coding included (Pro, Te
      -H "Content-Type: application/json" \
      -d '{"model": "mistral-small-latest", "messages": [{"role": "user", "content": "Hello"}]}'
    ```
+
+### Open WebUI
+
+1. Go to **Admin Panel › Settings › Connections** and click ➕ (**Add Connection**) next to **Manage OpenAI API Connections**.
+2. Enter the URL and API key for your setup (pick the one that matches below) and click **Save**.
+3. Open the model selector. Every model your plan includes shows up, for example `zai-glm-5-3-flash`.
+
+Which URL to use depends on how you run Open WebUI. Click the one that matches:
+
+<details>
+<summary><b>Open WebUI installed directly (pip, uv, Desktop app)</b></summary>
+
+<br>
+
+- URL: `http://127.0.0.1:8788/v1`
+- API key: anything
+
+</details>
+
+<details>
+<summary><b>Open WebUI in Docker with <code>--network host</code></b></summary>
+
+<br>
+
+The container shares the host's network, so the default setup works as is.
+
+- URL: `http://127.0.0.1:8788/v1`
+- API key: anything
+
+</details>
+
+<details>
+<summary><b>Open WebUI in Docker on Linux (default network)</b></summary>
+
+<br>
+
+Inside the container, `127.0.0.1` is the container itself, so it cannot reach a gateway that only listens on the host's loopback. Let the gateway also listen on the Docker bridge, which only containers on this machine can reach, and protect it with a key.
+
+1. Find the bridge address (usually `172.17.0.1`):
+
+   ```sh
+   ip -4 addr show docker0
+   ```
+
+2. Add to `gateway.env` and restart the gateway:
+
+   ```sh
+   BIND=172.17.0.1
+   GATEWAY_KEY=pick-a-long-random-string
+   ```
+
+3. Start the Open WebUI container with `--add-host=host.docker.internal:host-gateway` (in Docker Compose: `extra_hosts: ["host.docker.internal:host-gateway"]`).
+4. In Open WebUI:
+   - URL: `http://host.docker.internal:8788/v1`
+   - API key: your `GATEWAY_KEY`
+
+Programs on the host then reach the gateway at `http://172.17.0.1:8788/v1` instead of `127.0.0.1`.
+
+</details>
+
+<details>
+<summary><b>Open WebUI in Docker Desktop (macOS, Windows)</b></summary>
+
+<br>
+
+Docker Desktop forwards `host.docker.internal` to your computer's loopback, so the gateway can stay on `127.0.0.1`. It still needs a key, because it only answers other hostnames when `GATEWAY_KEY` is set.
+
+1. Add to `gateway.env` and restart the gateway:
+
+   ```sh
+   GATEWAY_KEY=pick-a-long-random-string
+   ```
+
+2. In Open WebUI:
+   - URL: `http://host.docker.internal:8788/v1`
+   - API key: your `GATEWAY_KEY`
+
+</details>
+
+### Updating
+
+```sh
+cd mistral-gateway
+git pull
+```
+
+Then restart the gateway (`systemctl --user restart mistral-gateway` if you run it as a service). Your `gateway.env` and `usage.db` are not touched by the update.
 
 ### Run it as a service (Linux, optional)
 
