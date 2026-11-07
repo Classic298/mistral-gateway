@@ -176,7 +176,7 @@ journalctl --user -u mistral-gateway -f
 
 ## Models
 
-The chat models below were tested through the gateway on 2026-10-06 (GLM 5.3 Flash on 2026-10-23, DeepSeek V4.1 Flash on 2026-10-28), including tool calls and every `reasoning_effort` level. Every model in the table was also tested with tool calls over `/v1/responses` on 2026-10-28, and Mistral Large 4, GLM 5.3, GLM 5.3 Flash and DeepSeek V4.1 Flash with streaming and every reasoning level too. Mistral changes the line-up from time to time; `/v1/models` always lists what your key can use.
+Every model below was tested through the gateway with tool calls and every reasoning level. `/v1/models` always lists what your key can use.
 
 | Model | Also available as | Context | Images | Reasoning effort |
 |---|---|---|---|---|
