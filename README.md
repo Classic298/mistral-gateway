@@ -211,7 +211,7 @@ Settings come from environment variables or from a `gateway.env` file next to `g
 | `COOLDOWN_429` / `COOLDOWN_DEAD` | `60` / `21600` | Seconds a key is skipped after rate limiting / after 401 or 402. |
 | `LOG_LEVEL` | `INFO` | Python logging level. |
 
-Endpoints: `/v1/chat/completions`, `/v1/responses`, `/v1/models`, `/health`, `/pool/status` (which key is serving, cooldowns) and `/usage?days=N`.
+Endpoints: `/v1/chat/completions`, `/v1/responses`, `/v1/models`, `/health`, `/pool/status` (which key is serving, cooldowns), `/usage?days=N` and `/quota`.
 
 ## What it does
 
@@ -220,6 +220,7 @@ Endpoints: `/v1/chat/completions`, `/v1/responses`, `/v1/models`, `/health`, `/p
 - Swaps a reasoning level a model does not offer for the closest one it does.
 - On a rate limit, retries the same key for up to 60 s. If the Vibe key stays rate limited or its budget is spent, it falls back to your Studio key if you set one.
 - Records daily token usage per model, readable at `/usage`.
+- Shows your plan and how much of the monthly Vibe allowance is used, at `/quota` and in the log at startup.
 
 Mistral's Responses API keeps no history, so clients have to send the whole conversation each time.
 

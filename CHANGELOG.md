@@ -7,6 +7,12 @@ Changelog conventions:
 
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- See how much of your monthly Vibe allowance is used. The gateway logs it at startup, and `/quota` shows your plan, the share of the Vibe allowance and of the API budget you have used, and when both reset.
+
 ## [1.0.5] - 2026-11-07
 
 ### Added

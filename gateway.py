@@ -43,6 +43,8 @@ MISTRAL_CHAT_URL = "https://api.mistral.ai/v1/chat/completions"
 MISTRAL_RESPONSES_URL = "https://api.mistral.ai/v1/responses"
 MISTRAL_MODELS_URL = "https://api.mistral.ai/v1/models"
 MISTRAL_WHOAMI_URL = "https://console.mistral.ai/api/vibe/whoami"
+MISTRAL_SUBSCRIPTION_URL = "https://api.mistral.ai/v1/billing/subscription"
+MISTRAL_BUDGET_URL = "https://api.mistral.ai/v1/billing/budget"
 
 BASE_DIR = pathlib.Path(__file__).parent
 STATE_FILE = BASE_DIR / "pool_state.json"
@@ -237,6 +239,15 @@ def upstream_request(url: str, key: str, body: bytes | None, method: str = "POST
         headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
     )
     return urllib.request.urlopen(request, timeout=600)
+
+
+def read_quota(key: str) -> dict:
+    """The plan and the monthly allowances the key's organization has used."""
+    with upstream_request(MISTRAL_SUBSCRIPTION_URL, key, None, method="GET") as response:
+        subscription = json.loads(response.read())
+    with upstream_request(MISTRAL_BUDGET_URL, key, None, method="GET") as response:
+        budget = json.loads(response.read())
+    return {"subscription": subscription, "budget": budget}
 
 
 def upstream_request_with_retry(
@@ -612,6 +623,16 @@ class Handler(BaseHTTPRequestHandler):
                 "accounts": accounts,
                 "serving": [account.name for account in POOL.accounts_for()],
             })
+        if route == "/quota":
+            account = POOL.accounts[0]
+            try:
+                quota = read_quota(account.key)
+            except urllib.error.HTTPError as error:
+                error.close()
+                return self._reply(502, {"error": {"message": f"Mistral billing answered HTTP {error.code}"}})
+            except (OSError, ValueError) as error:
+                return self._reply(502, {"error": {"message": f"Mistral billing: {error}"}})
+            return self._reply(200, {"key": account.name, **quota})
         if route == "/usage":
             # Optional ?days=N limits the window; default is everything logged.
             params = urllib.parse.parse_qs(query)
@@ -744,6 +765,12 @@ def main() -> int:
             LOG.info("vibe plan: %s (%s)", whoami.get("plan_name"), whoami.get("plan_type"))
         except (urllib.error.HTTPError, OSError, ValueError) as error:
             LOG.warning("vibe whoami failed (continuing anyway): %s", error)
+        try:
+            vibe_budget = read_quota(account.key)["budget"].get("vibe_budget") or {}
+            LOG.info("vibe allowance: %.0f%% used, resets %s",
+                     vibe_budget.get("usage_percentage", 0), vibe_budget.get("reset_at"))
+        except (urllib.error.HTTPError, OSError, ValueError, AttributeError) as error:
+            LOG.warning("vibe quota read failed (continuing anyway): %s", error)
 
     port = int(os.environ.get("PORT", "8788"))
     bind_address = os.environ.get("BIND", "127.0.0.1")
