@@ -343,6 +343,16 @@ def normalize_stream_event(event: bytes, saw_tool_call: bool = False) -> tuple[b
     return b"data: " + json.dumps(parsed).encode() + separator + tail, saw_tool_call
 
 
+def keep_chat_models(models: dict) -> dict:
+    """Leave out the models that cannot chat, such as embedding, OCR and speech models."""
+    models["data"] = [
+        model
+        for model in models.get("data", [])
+        if model.get("capabilities", {}).get("completion_chat", True)
+    ]
+    return models
+
+
 def add_alias_models(models: dict) -> dict:
     """List each gateway alias as a model of its own, replacing any upstream entry of that name."""
     upstream_models = {model["id"]: model for model in models.get("data", [])}
@@ -607,7 +617,7 @@ class Handler(BaseHTTPRequestHandler):
                     continue
                 finally:
                     upstream.close()
-                return self._reply(200, add_alias_models(models))
+                return self._reply(200, add_alias_models(keep_chat_models(models)))
             return self._reply(502, {"error": {"message": "all keys failed"}})
         if route == "/pool/status":
             now = time.time()

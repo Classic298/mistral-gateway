@@ -82,7 +82,7 @@ Requirements: Python 3.10+ and a Mistral Vibe plan with coding included (Pro, Te
 
 1. Open **Settings** and pick **Connections** in the **Admin** part of the list (older versions: **Admin Panel › Settings › Connections**). Click ➕ (**Add Connection**) next to **Manage OpenAI API Connections**.
 2. Enter the URL for your setup (pick the one that matches below). As the API key, enter your `GATEWAY_KEY` if you set one, otherwise any placeholder such as `none`.
-3. Optional, but recommended: your plan includes dozens of models, including embedding, OCR and transcription models that cannot chat. In the same window, add only the ones you want under **Model IDs** (for example `zai-glm-5-3-flash`), so the model selector stays short. Leave it empty to get all of them.
+3. Optional, but recommended: your plan includes dozens of models. In the same window, add only the ones you want under **Model IDs** (for example `zai-glm-5-3-flash`), so the model selector stays short. Leave it empty to get all of them.
 4. Click **Save** and open the model selector. Your models show up there.
 
 Which URL to use depends on how you run Open WebUI. Click the one that matches:
@@ -181,7 +181,7 @@ journalctl --user -u mistral-gateway -f
 
 ## Models
 
-Every model below was tested through the gateway with tool calls and every reasoning level. `/v1/models` always lists what your key can use.
+Every model below was tested through the gateway with tool calls and every reasoning level. `/v1/models` always lists the chat models your key can use.
 
 | Model | Also available as | Context | Images | Reasoning effort |
 |---|---|---|---|---|
@@ -198,7 +198,7 @@ Every model below was tested through the gateway with tool calls and every reaso
 | `ministral-3b-latest` | `ministral-3b-2512` | 256K | yes | no reasoning |
 | `voxtral-small-latest` | `voxtral-small-2507` | 32K | no | no reasoning |
 
-All of them handle tool calls. Clients can send any standard `reasoning_effort` level to any model. When a model does not offer the requested level, the gateway uses the closest one it does offer, and on a tie `minimal` and `low` go down while everything else goes up: on Mistral Large 4, Medium and Small, `minimal` and `low` become `none` and the rest become `high`. Models without reasoning get the request without it. DeepSeek V4.1 Flash only thinks when the client sends a reasoning level. The dotted names, `mistral-large`, `deepseek-v4-1-flash` and `deepseek-v4-flash-1017` (the name in Mistral's docs) are gateway aliases. `mistral-large-latest` points to Large 4 here, while Mistral's own API still maps it to `mistral-large-2512`. Labs models such as `labs-leanstral-1-5` only answer once an admin enables Labs models in the organization settings. Embedding, OCR and transcription models are listed too, but the gateway only serves chat.
+All of them handle tool calls. Clients can send any standard `reasoning_effort` level to any model. When a model does not offer the requested level, the gateway uses the closest one it does offer, and on a tie `minimal` and `low` go down while everything else goes up: on Mistral Large 4, Medium and Small, `minimal` and `low` become `none` and the rest become `high`. Models without reasoning get the request without it. DeepSeek V4.1 Flash only thinks when the client sends a reasoning level. The dotted names, `mistral-large`, `deepseek-v4-1-flash` and `deepseek-v4-flash-1017` (the name in Mistral's docs) are gateway aliases. `mistral-large-latest` points to Large 4 here, while Mistral's own API still maps it to `mistral-large-2512`. Labs models such as `labs-leanstral-1-5` only answer once an admin enables Labs models in the organization settings.
 
 ## Configuration
 

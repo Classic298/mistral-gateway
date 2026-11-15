@@ -13,6 +13,10 @@ Changelog conventions:
 
 - Apps that send OpenAI's `store` setting no longer get an error from Mistral. Mistral refuses the setting on Chat Completions, and on the Responses API when it is switched on, so the gateway now leaves it out.
 
+### Changed
+
+- The model list only shows models that can chat. Embedding, OCR, moderation, transcription and speech models are left out, because the gateway cannot serve them, so the model selector in your app gets shorter.
+
 ## [1.0.6] - 2026-11-08
 
 ### Added
