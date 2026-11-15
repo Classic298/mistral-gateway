@@ -56,6 +56,7 @@ Requirements: Python 3.10+ and a Mistral Vibe plan with coding included (Pro, Te
 
    ```
    INFO vibe plan: ... (...)
+   INFO vibe allowance: ...% used, resets ...
    INFO mistral gateway on 127.0.0.1:8788 (keys: vibe)
    ```
 
@@ -111,7 +112,7 @@ The container shares the host's network, so the default setup works as is.
 
 <br>
 
-Inside the container, `127.0.0.1` is the container itself, so it cannot reach a gateway that only listens on the host's loopback. Let the gateway also listen on the Docker bridge, which only containers on this machine can reach, and protect it with a key.
+Inside the container, `127.0.0.1` is the container itself, so it cannot reach a gateway that only listens on the host's loopback. Let the gateway listen on the Docker bridge instead, which only containers on this machine can reach, and protect it with a key.
 
 1. Find the bridge address (usually `172.17.0.1`):
 
@@ -202,14 +203,14 @@ Settings come from environment variables or from a `gateway.env` file next to `g
 | Variable | Default | Meaning |
 |---|---|---|
 | `VIBE_KEY` | `MISTRAL_API_KEY` from `~/.vibe/.env` | Your Vibe plan key. Set it if you copied the key from Code › Extensions, or to override the CLI's file. |
-| `VIBE_ENV_FILE` | `~/.vibe/.env` | Where to look for the Vibe CLI's key. |
+| `VIBE_ENV_FILE` | `~/.vibe/.env` | Where to look for the Vibe CLI's key. A `~` in `gateway.env` is not expanded. |
 | `STUDIO_API_KEY` | unset | Optional pay-as-you-go fallback key from Mistral AI Studio. |
 | `GATEWAY_KEY` | unset | If set, clients must send it as `Authorization: Bearer <key>`. Without it the gateway only answers requests addressed to `localhost`, `127.0.0.1` or `[::1]`, so set it if a client reaches the gateway under another hostname (e.g. from a Docker container). |
-| `BIND` | `127.0.0.1` | Listen address. Keep it on loopback (see below). |
+| `BIND` | `127.0.0.1` | Listen address, one only. Keep it on loopback (see below). |
 | `PORT` | `8788` | Listen port. |
 | `RETRY_429_SECONDS` / `RETRY_429_INTERVAL` | `60` / `10` | How long and how often to retry a rate-limited key. |
 | `COOLDOWN_429` / `COOLDOWN_DEAD` | `60` / `21600` | Seconds a key is skipped after rate limiting / after 401 or 402. |
-| `LOG_LEVEL` | `INFO` | Python logging level. |
+| `LOG_LEVEL` | `INFO` | Python logging level, in upper case (`DEBUG`, `WARNING`). |
 
 Endpoints: `/v1/chat/completions`, `/v1/responses`, `/v1/models`, `/health`, `/pool/status` (which key is serving, cooldowns), `/usage?days=N` and `/quota`.
 
