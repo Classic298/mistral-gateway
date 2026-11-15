@@ -231,7 +231,7 @@ Mistral's Responses API keeps no history, so clients have to send the whole conv
 
 ## Terms of service
 
-Checked against the [Mistral AI Terms of Service for EU consumers](https://legal.mistral.ai/terms/eu-consumers-terms-of-service) (effective August 7, 2026) and the [Mistral AI Commercial Terms of Service](https://legal.mistral.ai/terms/commercial-terms-of-service) (effective August 5, 2026). Consumers outside the EU have [separate terms](https://legal.mistral.ai/terms). This section is the author's reading of those documents and is **not legal advice**.
+Checked against the [Mistral AI Terms of Service for EU consumers](https://legal.mistral.ai/terms/eu-consumers-terms-of-service) (effective October 8, 2026) and the [Mistral AI Commercial Terms of Service](https://legal.mistral.ai/terms/commercial-terms-of-service) (effective September 25, 2026). Consumers outside the EU have [separate terms](https://legal.mistral.ai/terms). This section is the author's reading of those documents and is **not legal advice**.
 
 **Why the gateway is designed to stay within those terms:**
 
@@ -252,4 +252,4 @@ This software is provided "as is" under the [PolyForm Noncommercial License 1.0.
 
 [PolyForm Noncommercial 1.0.0](LICENSE): free for personal, hobby, research and other noncommercial use. Commercial use is not permitted.
 
-It is noncommercial because a Mistral Vibe subscription is a consumer plan: Mistral's consumer terms only cover "your personal use as a consumer", and business use falls under their separate [Commercial Terms of Service](https://legal.mistral.ai/terms/commercial-terms-of-service).
+It is noncommercial because a Mistral Vibe subscription is a consumer plan: Mistral's EU consumer terms only cover "your personal use as an EEA consumer", and business use falls under their separate [Commercial Terms of Service](https://legal.mistral.ai/terms/commercial-terms-of-service).
