@@ -37,7 +37,7 @@ import urllib.request
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-VERSION = "1.0.6"
+VERSION = "1.0.7"
 
 LOG = logging.getLogger("mistral-gateway")
 
