@@ -185,7 +185,7 @@ Every model below was tested through the gateway with tool calls and every reaso
 | `mistral-small-latest` | `mistral-small-2603`, `mistral-vibe-cli-fast` | 256K | yes | `none`, `high` |
 | `zai-glm-5-3` | `zai-glm-latest`, `zai-glm-5`, `zai-glm-5.3`, `glm-5.3` | 1M | no | `low`, `high`, `max` |
 | `zai-glm-5-3-flash` | `zai-glm-5.3-flash`, `glm-5.3-flash` | 1M | yes | `low`, `high`, `max` |
-| `deepseek-v4-1-flash-1017` | `deepseek-v4.1-flash`, `deepseek-v4.1-flash-1017`, `deepseek-v4-1-flash`, `deepseek-v4-flash-1017` | 1M | no | `none`, `low`, `high`, `xhigh`, `max` |
+| `deepseek-v4-1-flash-1017` | `deepseek-v4.1-flash`, `deepseek-v4.1-flash-1017`, `deepseek-v4-1-flash`, `deepseek-v4-flash-1017` | 1M | yes | `none`, `low`, `high`, `xhigh`, `max` |
 | `mistral-large-2512` | none | 256K | yes | no reasoning |
 | `codestral-latest` | `codestral-2508` | 128K | no | no reasoning |
 | `ministral-14b-latest` | `ministral-14b-2512` | 256K | yes | no reasoning |
