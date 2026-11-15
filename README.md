@@ -36,6 +36,8 @@ Requirements: Python 3.10+ and a Mistral Vibe plan with coding included (Pro, Te
 
    ![Copying the Vibe API Key from Code › Extensions](assets/vibe-key.gif)
 
+   The gateway reads its keys once at startup. After you rotate the key or log in again, put the new key into `gateway.env` if you keep it there, then restart the gateway.
+
 3. Optional: add a Studio API key as a fallback for when the Vibe key is rate limited or its monthly budget is spent. In the Mistral admin panel, open **API › API Keys** and click **New key**, then add it to `gateway.env`:
 
    ```sh
@@ -56,7 +58,8 @@ Requirements: Python 3.10+ and a Mistral Vibe plan with coding included (Pro, Te
 
    ```
    INFO vibe plan: ... (...)
-   INFO mistral gateway on 127.0.0.1:8788 (keys: vibe)
+   INFO vibe allowance: ...% used, resets ...
+   INFO mistral gateway ... on 127.0.0.1:8788 (keys: vibe)
    ```
 
 5. Point your client at it:
@@ -79,7 +82,7 @@ Requirements: Python 3.10+ and a Mistral Vibe plan with coding included (Pro, Te
 
 1. Open **Settings** and pick **Connections** in the **Admin** part of the list (older versions: **Admin Panel › Settings › Connections**). Click ➕ (**Add Connection**) next to **Manage OpenAI API Connections**.
 2. Enter the URL for your setup (pick the one that matches below). As the API key, enter your `GATEWAY_KEY` if you set one, otherwise any placeholder such as `none`.
-3. Optional, but recommended: your plan includes dozens of models, including embedding, OCR and transcription models that cannot chat. In the same window, add only the ones you want under **Model IDs** (for example `zai-glm-5-3-flash`), so the model selector stays short. Leave it empty to get all of them.
+3. Optional, but recommended: your plan includes dozens of models. In the same window, add only the ones you want under **Model IDs** (for example `zai-glm-5-3-flash`), so the model selector stays short. Leave it empty to get all of them.
 4. Click **Save** and open the model selector. Your models show up there.
 
 Which URL to use depends on how you run Open WebUI. Click the one that matches:
@@ -111,7 +114,7 @@ The container shares the host's network, so the default setup works as is.
 
 <br>
 
-Inside the container, `127.0.0.1` is the container itself, so it cannot reach a gateway that only listens on the host's loopback. Let the gateway also listen on the Docker bridge, which only containers on this machine can reach, and protect it with a key.
+Inside the container, `127.0.0.1` is the container itself, so it cannot reach a gateway that only listens on the host's loopback. Let the gateway listen on the Docker bridge instead, which only containers on this machine can reach, and protect it with a key.
 
 1. Find the bridge address (usually `172.17.0.1`):
 
@@ -161,7 +164,7 @@ cd mistral-gateway
 git pull
 ```
 
-Then restart the gateway (`systemctl --user restart mistral-gateway` if you run it as a service). Your `gateway.env` and `usage.db` are not touched by the update.
+Then restart the gateway (`systemctl --user restart mistral-gateway` if you run it as a service). The startup log shows which release is running, and so does `/health` (send your `GATEWAY_KEY` if you set one). Your `gateway.env` and `usage.db` are not touched by the update.
 
 ### Run it as a service (Linux, optional)
 
@@ -171,12 +174,14 @@ cp mistral-gateway.service.example ~/.config/systemd/user/mistral-gateway.servic
 # the example assumes the clone is at ~/mistral-gateway; otherwise edit WorkingDirectory and ExecStart
 systemctl --user daemon-reload
 systemctl --user enable --now mistral-gateway
+# on a server, keep it running while you are logged out
+loginctl enable-linger "$USER"
 journalctl --user -u mistral-gateway -f
 ```
 
 ## Models
 
-Every model below was tested through the gateway with tool calls and every reasoning level. `/v1/models` always lists what your key can use.
+Every model below was tested through the gateway with tool calls and every reasoning level. `/v1/models` always lists the chat models your key can use.
 
 | Model | Also available as | Context | Images | Reasoning effort |
 |---|---|---|---|---|
@@ -185,7 +190,7 @@ Every model below was tested through the gateway with tool calls and every reaso
 | `mistral-small-latest` | `mistral-small-2603`, `mistral-vibe-cli-fast` | 256K | yes | `none`, `high` |
 | `zai-glm-5-3` | `zai-glm-latest`, `zai-glm-5`, `zai-glm-5.3`, `glm-5.3` | 1M | no | `low`, `high`, `max` |
 | `zai-glm-5-3-flash` | `zai-glm-5.3-flash`, `glm-5.3-flash` | 1M | yes | `low`, `high`, `max` |
-| `deepseek-v4-1-flash-1017` | `deepseek-v4.1-flash`, `deepseek-v4.1-flash-1017`, `deepseek-v4-1-flash`, `deepseek-v4-flash-1017` | 1M | no | `none`, `low`, `high`, `xhigh`, `max` |
+| `deepseek-v4-1-flash-1017` | `deepseek-v4.1-flash`, `deepseek-v4.1-flash-1017`, `deepseek-v4-1-flash`, `deepseek-v4-flash-1017` | 1M | yes | `none`, `low`, `high`, `xhigh`, `max` |
 | `mistral-large-2512` | none | 256K | yes | no reasoning |
 | `codestral-latest` | `codestral-2508` | 128K | no | no reasoning |
 | `ministral-14b-latest` | `ministral-14b-2512` | 256K | yes | no reasoning |
@@ -193,7 +198,7 @@ Every model below was tested through the gateway with tool calls and every reaso
 | `ministral-3b-latest` | `ministral-3b-2512` | 256K | yes | no reasoning |
 | `voxtral-small-latest` | `voxtral-small-2507` | 32K | no | no reasoning |
 
-All of them handle tool calls. Clients can send any standard `reasoning_effort` level to any model. When a model does not offer the requested level, the gateway uses the closest one it does offer, and on a tie `minimal` and `low` go down while everything else goes up: on Mistral Large 4, Medium and Small, `minimal` and `low` become `none` and the rest become `high`. Models without reasoning get the request without it. DeepSeek V4.1 Flash only thinks when the client sends a reasoning level. The dotted names, `mistral-large`, `deepseek-v4-1-flash` and `deepseek-v4-flash-1017` (the name in Mistral's docs) are gateway aliases. `mistral-large-latest` points to Large 4 here, while Mistral's own API still maps it to `mistral-large-2512`. Labs models such as `labs-leanstral-1-5` only answer once an admin enables Labs models in the organization settings. Embedding, OCR and transcription models are listed too, but the gateway only serves chat.
+All of them handle tool calls. Clients can send any standard `reasoning_effort` level to any model. When a model does not offer the requested level, the gateway uses the closest one it does offer, and on a tie `minimal` and `low` go down while everything else goes up: on Mistral Large 4, Medium and Small, `minimal` and `low` become `none` and the rest become `high`. Models without reasoning get the request without it. DeepSeek V4.1 Flash only thinks when the client sends a reasoning level. The dotted names, `mistral-large`, `deepseek-v4-1-flash` and `deepseek-v4-flash-1017` (the name in Mistral's docs) are gateway aliases. `mistral-large-latest` points to Large 4 here, while Mistral's own API still maps it to `mistral-large-2512`. Labs models such as `labs-leanstral-1-5` only answer once an admin enables Labs models in the organization settings.
 
 ## Configuration
 
@@ -202,14 +207,14 @@ Settings come from environment variables or from a `gateway.env` file next to `g
 | Variable | Default | Meaning |
 |---|---|---|
 | `VIBE_KEY` | `MISTRAL_API_KEY` from `~/.vibe/.env` | Your Vibe plan key. Set it if you copied the key from Code › Extensions, or to override the CLI's file. |
-| `VIBE_ENV_FILE` | `~/.vibe/.env` | Where to look for the Vibe CLI's key. |
+| `VIBE_ENV_FILE` | `~/.vibe/.env` | Where to look for the Vibe CLI's key. A `~` in `gateway.env` is not expanded. |
 | `STUDIO_API_KEY` | unset | Optional pay-as-you-go fallback key from Mistral AI Studio. |
 | `GATEWAY_KEY` | unset | If set, clients must send it as `Authorization: Bearer <key>`. Without it the gateway only answers requests addressed to `localhost`, `127.0.0.1` or `[::1]`, so set it if a client reaches the gateway under another hostname (e.g. from a Docker container). |
-| `BIND` | `127.0.0.1` | Listen address. Keep it on loopback (see below). |
+| `BIND` | `127.0.0.1` | Listen address, one only. Keep it on loopback (see below). |
 | `PORT` | `8788` | Listen port. |
 | `RETRY_429_SECONDS` / `RETRY_429_INTERVAL` | `60` / `10` | How long and how often to retry a rate-limited key. |
 | `COOLDOWN_429` / `COOLDOWN_DEAD` | `60` / `21600` | Seconds a key is skipped after rate limiting / after 401 or 402. |
-| `LOG_LEVEL` | `INFO` | Python logging level. |
+| `LOG_LEVEL` | `INFO` | Python logging level, in upper case (`DEBUG`, `WARNING`). |
 
 Endpoints: `/v1/chat/completions`, `/v1/responses`, `/v1/models`, `/health`, `/pool/status` (which key is serving, cooldowns), `/usage?days=N` and `/quota`.
 
@@ -226,7 +231,7 @@ Mistral's Responses API keeps no history, so clients have to send the whole conv
 
 ## Terms of service
 
-Checked against the [Mistral AI Terms of Service for EU consumers](https://legal.mistral.ai/terms/eu-consumers-terms-of-service) (effective August 7, 2026) and the [Mistral AI Commercial Terms of Service](https://legal.mistral.ai/terms/commercial-terms-of-service) (effective August 5, 2026). Consumers outside the EU have [separate terms](https://legal.mistral.ai/terms). This section is the author's reading of those documents and is **not legal advice**.
+Checked against the [Mistral AI Terms of Service for EU consumers](https://legal.mistral.ai/terms/eu-consumers-terms-of-service) (effective October 8, 2026) and the [Mistral AI Commercial Terms of Service](https://legal.mistral.ai/terms/commercial-terms-of-service) (effective September 25, 2026). Consumers outside the EU have [separate terms](https://legal.mistral.ai/terms). This section is the author's reading of those documents and is **not legal advice**.
 
 **Why the gateway is designed to stay within those terms:**
 
@@ -247,4 +252,4 @@ This software is provided "as is" under the [PolyForm Noncommercial License 1.0.
 
 [PolyForm Noncommercial 1.0.0](LICENSE): free for personal, hobby, research and other noncommercial use. Commercial use is not permitted.
 
-It is noncommercial because a Mistral Vibe subscription is a consumer plan: Mistral's consumer terms only cover "your personal use as a consumer", and business use falls under their separate [Commercial Terms of Service](https://legal.mistral.ai/terms/commercial-terms-of-service).
+It is noncommercial because a Mistral Vibe subscription is a consumer plan: Mistral's EU consumer terms only cover "your personal use as an EEA consumer", and business use falls under their separate [Commercial Terms of Service](https://legal.mistral.ai/terms/commercial-terms-of-service).

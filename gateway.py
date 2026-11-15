@@ -37,6 +37,8 @@ import urllib.request
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+VERSION = "1.0.7"
+
 LOG = logging.getLogger("mistral-gateway")
 
 MISTRAL_CHAT_URL = "https://api.mistral.ai/v1/chat/completions"
@@ -343,6 +345,16 @@ def normalize_stream_event(event: bytes, saw_tool_call: bool = False) -> tuple[b
     return b"data: " + json.dumps(parsed).encode() + separator + tail, saw_tool_call
 
 
+def keep_chat_models(models: dict) -> dict:
+    """Leave out the models that cannot chat, such as embedding, OCR and speech models."""
+    models["data"] = [
+        model
+        for model in models.get("data", [])
+        if model.get("capabilities", {}).get("completion_chat", True)
+    ]
+    return models
+
+
 def add_alias_models(models: dict) -> dict:
     """List each gateway alias as a model of its own, replacing any upstream entry of that name."""
     upstream_models = {model["id"]: model for model in models.get("data", [])}
@@ -580,6 +592,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._reply(200, {"ok": True})
             return self._reply(200, {
                 "ok": True,
+                "version": VERSION,
                 "accounts": len(POOL.accounts),
                 "serving": len(POOL.accounts_for()),
             })
@@ -607,7 +620,7 @@ class Handler(BaseHTTPRequestHandler):
                     continue
                 finally:
                     upstream.close()
-                return self._reply(200, add_alias_models(models))
+                return self._reply(200, add_alias_models(keep_chat_models(models)))
             return self._reply(502, {"error": {"message": "all keys failed"}})
         if route == "/pool/status":
             now = time.time()
@@ -684,6 +697,10 @@ class Handler(BaseHTTPRequestHandler):
         aliased_model = MODEL_ALIASES.get(str(chat_request.get("model")))
         if aliased_model:
             chat_request["model"] = aliased_model
+            body = json.dumps(chat_request).encode()
+        # Mistral stores nothing: chat answers the field with 422, responses answers true with 400.
+        if "store" in chat_request:
+            del chat_request["store"]
             body = json.dumps(chat_request).encode()
         stream = bool(chat_request.get("stream"))
         if self.path in RESPONSES_ROUTES:
@@ -775,7 +792,7 @@ def main() -> int:
     port = int(os.environ.get("PORT", "8788"))
     bind_address = os.environ.get("BIND", "127.0.0.1")
     server = ThreadingHTTPServer((bind_address, port), Handler)
-    LOG.info("mistral gateway on %s:%d (keys: %s)", bind_address, port,
+    LOG.info("mistral gateway %s on %s:%d (keys: %s)", VERSION, bind_address, port,
              ", ".join(account.name for account in POOL.accounts))
 
     def shutdown(signum, frame):
