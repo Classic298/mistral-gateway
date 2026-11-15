@@ -7,6 +7,12 @@ Changelog conventions:
 
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- Apps that send OpenAI's `store` setting no longer get an error from Mistral. Mistral refuses the setting on Chat Completions, and on the Responses API when it is switched on, so the gateway now leaves it out.
+
 ## [1.0.6] - 2026-11-08
 
 ### Added
