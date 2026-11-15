@@ -37,6 +37,8 @@ import urllib.request
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+VERSION = "1.0.6"
+
 LOG = logging.getLogger("mistral-gateway")
 
 MISTRAL_CHAT_URL = "https://api.mistral.ai/v1/chat/completions"
@@ -590,6 +592,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._reply(200, {"ok": True})
             return self._reply(200, {
                 "ok": True,
+                "version": VERSION,
                 "accounts": len(POOL.accounts),
                 "serving": len(POOL.accounts_for()),
             })
@@ -789,7 +792,7 @@ def main() -> int:
     port = int(os.environ.get("PORT", "8788"))
     bind_address = os.environ.get("BIND", "127.0.0.1")
     server = ThreadingHTTPServer((bind_address, port), Handler)
-    LOG.info("mistral gateway on %s:%d (keys: %s)", bind_address, port,
+    LOG.info("mistral gateway %s on %s:%d (keys: %s)", VERSION, bind_address, port,
              ", ".join(account.name for account in POOL.accounts))
 
     def shutdown(signum, frame):

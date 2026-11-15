@@ -3,11 +3,16 @@ Changelog conventions:
 - Format follows Keep a Changelog (https://keepachangelog.com/en/1.1.0/) and Semantic Versioning (https://semver.org/).
 - Only three sections are used, always in this order: Added, Fixed, Changed. Omit a section when it has no entries.
 - Write every entry for users: what they notice or can now do, not how the code works.
+- A release also sets `VERSION` in `gateway.py`.
 -->
 
 # Changelog
 
 ## [Unreleased]
+
+### Added
+
+- See which release is running. The gateway logs its version at startup and `/health` shows it.
 
 ### Fixed
 

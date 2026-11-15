@@ -59,7 +59,7 @@ Requirements: Python 3.10+ and a Mistral Vibe plan with coding included (Pro, Te
    ```
    INFO vibe plan: ... (...)
    INFO vibe allowance: ...% used, resets ...
-   INFO mistral gateway on 127.0.0.1:8788 (keys: vibe)
+   INFO mistral gateway ... on 127.0.0.1:8788 (keys: vibe)
    ```
 
 5. Point your client at it:
@@ -164,7 +164,7 @@ cd mistral-gateway
 git pull
 ```
 
-Then restart the gateway (`systemctl --user restart mistral-gateway` if you run it as a service). Your `gateway.env` and `usage.db` are not touched by the update.
+Then restart the gateway (`systemctl --user restart mistral-gateway` if you run it as a service). The startup log shows which release is running, and so does `/health` (send your `GATEWAY_KEY` if you set one). Your `gateway.env` and `usage.db` are not touched by the update.
 
 ### Run it as a service (Linux, optional)
 
