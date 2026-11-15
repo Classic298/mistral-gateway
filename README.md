@@ -36,6 +36,8 @@ Requirements: Python 3.10+ and a Mistral Vibe plan with coding included (Pro, Te
 
    ![Copying the Vibe API Key from Code › Extensions](assets/vibe-key.gif)
 
+   The gateway reads its keys once at startup. After you rotate the key or log in again, put the new key into `gateway.env` if you keep it there, then restart the gateway.
+
 3. Optional: add a Studio API key as a fallback for when the Vibe key is rate limited or its monthly budget is spent. In the Mistral admin panel, open **API › API Keys** and click **New key**, then add it to `gateway.env`:
 
    ```sh
@@ -172,6 +174,8 @@ cp mistral-gateway.service.example ~/.config/systemd/user/mistral-gateway.servic
 # the example assumes the clone is at ~/mistral-gateway; otherwise edit WorkingDirectory and ExecStart
 systemctl --user daemon-reload
 systemctl --user enable --now mistral-gateway
+# on a server, keep it running while you are logged out
+loginctl enable-linger "$USER"
 journalctl --user -u mistral-gateway -f
 ```
 
