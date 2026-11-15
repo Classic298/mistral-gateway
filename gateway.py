@@ -685,6 +685,10 @@ class Handler(BaseHTTPRequestHandler):
         if aliased_model:
             chat_request["model"] = aliased_model
             body = json.dumps(chat_request).encode()
+        # Mistral stores nothing: chat answers the field with 422, responses answers true with 400.
+        if "store" in chat_request:
+            del chat_request["store"]
+            body = json.dumps(chat_request).encode()
         stream = bool(chat_request.get("stream"))
         if self.path in RESPONSES_ROUTES:
             self._request_model = chat_request.get("model") or "unknown"
